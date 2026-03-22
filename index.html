@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EmoNav Voice Reflection</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header>
+        <h1>EmoNav Voice Reflection</h1>
+        <p>
+          Speak your thoughts. Hear them back. Confirm your intent. Then get a
+          supportive acknowledgment and reflection analytics.
+        </p>
+        <p class="mission">
+          Goal: help you hear yourself clearly, reduce dependency on external
+          bias, and move toward honest, direct self-conversations.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>Account</h2>
+        <div class="auth-row">
+          <p id="authStatus" class="status">Status: Checking sign-in...</p>
+          <div class="actions">
+            <a id="googleLoginBtn" class="link-btn" href="/api/auth/google/login"
+              >Continue with Google</a
+            >
+            <button id="logoutBtn" type="button" hidden>Logout</button>
+          </div>
+        </div>
+        <p id="authUser" class="auth-user"></p>
+      </section>
+
+      <section class="card">
+        <h2>1) Record Voice Input</h2>
+        <div class="actions">
+          <button id="startListeningBtn">Start Listening</button>
+          <button id="stopListeningBtn" disabled>Stop</button>
+          <button id="clearCurrentBtn">Clear Current</button>
+        </div>
+        <p class="status" id="status">Status: Idle</p>
+        <label for="transcriptInput">Captured Transcript</label>
+        <textarea
+          id="transcriptInput"
+          rows="5"
+          placeholder="Your spoken words will appear here..."
+        ></textarea>
+        <div class="actions">
+          <button id="playbackBtn">Listen: My Exact Words</button>
+          <button id="listenerPerspectiveBtn">
+            Listen: How It May Land For Others
+          </button>
+          <button id="confirmMeaningBtn">This Is What I Mean</button>
+        </div>
+        <p id="listenerPerspectiveOutput" class="listener-perspective">
+          Choose the second listen option to hear a listener-perspective
+          interpretation.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>2) Supportive Acknowledgment</h2>
+        <div class="actions">
+          <button id="speakReplyBtn" disabled>Speak Acknowledgment</button>
+        </div>
+        <p id="replyOutput" class="reply">
+          Confirm your input to generate the response.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>3) Current Input Analysis</h2>
+        <div id="analysisGrid" class="analysis-grid">
+          <article>
+            <h3>Emotion Signals</h3>
+            <p id="emotionScore">-</p>
+          </article>
+          <article>
+            <h3>Confidence In Input</h3>
+            <p id="confidenceScore">-</p>
+          </article>
+          <article>
+            <h3>To-the-Point Score</h3>
+            <p id="pointScore">-</p>
+          </article>
+          <article>
+            <h3>Word Choice Notes</h3>
+            <p id="wordChoiceNotes">-</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>4) Comparison With Last Interaction</h2>
+        <p id="comparisonOutput">
+          No previous interactions yet. Complete one confirmation to begin
+          trend tracking.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>5) Immediate Grounding Suggestions</h2>
+        <div class="actions">
+          <button id="speakSupportBtn" disabled>Speak Grounding Steps</button>
+        </div>
+        <p id="supportOutput" class="support-output">
+          Confirm your input to get tailored suggestions for calming and
+          returning to the present moment.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>6) End-of-Session Reflection</h2>
+        <p id="reflectionPrompt" class="reflection-prompt">
+          After some time has passed, reflect on your experience. This helps build growth threads and deeper self-awareness.
+        </p>
+        <div class="actions">
+          <button id="startReflectionBtn">Start Reflection</button>
+          <button id="speakReflectionBtn" disabled>Speak Reflection Questions</button>
+        </div>
+        <div id="reflectionQuestions" class="reflection-questions" hidden>
+          <label for="currentExperienceInput">What is your experience now?</label>
+          <textarea
+            id="currentExperienceInput"
+            rows="3"
+            placeholder="How are you feeling after the grounding exercises..."
+          ></textarea>
+          
+          <label for="triggerInput">What ignited your earlier emotional burst?</label>
+          <textarea
+            id="triggerInput"
+            rows="3"
+            placeholder="What triggered the initial feelings..."
+          ></textarea>
+          
+          <label for="specificFeelingInput">Did you feel fear, stuck between right/wrong, or something else?</label>
+          <textarea
+            id="specificFeelingInput"
+            rows="3"
+            placeholder="Describe the specific feeling or dilemma..."
+          ></textarea>
+          
+          <div class="actions">
+            <button id="saveReflectionBtn">Save Reflection & Build Growth Thread</button>
+          </div>
+        </div>
+        <p id="growthThreadOutput" class="growth-thread">
+          Complete a reflection to see your growth insights.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Interaction History</h2>
+        <div class="actions">
+          <button id="clearHistoryBtn">Clear History</button>
+        </div>
+        <ul id="historyList" class="history-list"></ul>
+      </section>
+    </main>
+    <script src="./script.js"></script>
+  </body>
+  </html>
