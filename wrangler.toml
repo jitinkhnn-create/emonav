@@ -2,6 +2,10 @@ name = "emonav"
 main = "_worker.js"
 compatibility_date = "2026-03-22"
 
+[[kv_namespaces]]
+binding = "EMONAV_SESSIONS"
+id = "your_kv_namespace_id_here"
+
 [assets]
 directory = "."
 binding = "ASSETS"

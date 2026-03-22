@@ -15,7 +15,7 @@ export default {
       return handleMe(request, env);
     }
     if (url.pathname === "/api/auth/logout" && request.method === "POST") {
-      return handleLogout();
+      return handleLogout(request, env);
     }
     if (url.pathname === "/api/infer" && request.method === "POST") {
       return handleInfer(request, env);
@@ -67,45 +67,7 @@ function base64UrlDecode(input) {
 function randomString(bytes = 24) {
   const arr = new Uint8Array(bytes);
   crypto.getRandomValues(arr);
-  return base64UrlEncode(arr);
-}
-
-async function importHmacKey(secret) {
-  return crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"]
-  );
-}
-
-async function signToken(payloadObj, secret) {
-  const payload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payloadObj)));
-  const key = await importHmacKey(secret);
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-  return `${payload}.${base64UrlEncode(new Uint8Array(sig))}`;
-}
-
-async function verifyToken(token, secret) {
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
-  const [payload, sig] = parts;
-  const key = await importHmacKey(secret);
-  const ok = await crypto.subtle.verify(
-    "HMAC",
-    key,
-    base64UrlDecode(sig),
-    new TextEncoder().encode(payload)
-  );
-  if (!ok) return null;
-  try {
-    const parsed = JSON.parse(new TextDecoder().decode(base64UrlDecode(payload)));
-    if (!parsed.exp || Date.now() > parsed.exp) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 function secureCookie(name, value, maxAgeSec, sameSite = "Strict") {
@@ -129,11 +91,52 @@ function getBaseUrl(request, env) {
   return `${url.protocol}//${url.host}`;
 }
 
+async function createSession(env, userData) {
+  const sessionId = randomString(32);
+  const sessionData = {
+    ...userData,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days
+  };
+
+  await env.EMONAV_SESSIONS.put(sessionId, JSON.stringify(sessionData), {
+    expirationTtl: 7 * 24 * 60 * 60 // 7 days in seconds
+  });
+
+  return sessionId;
+}
+
+async function getSession(env, sessionId) {
+  if (!sessionId) return null;
+
+  try {
+    const sessionData = await env.EMONAV_SESSIONS.get(sessionId);
+    if (!sessionData) return null;
+
+    const session = JSON.parse(sessionData);
+    if (session.expiresAt < Date.now()) {
+      await env.EMONAV_SESSIONS.delete(sessionId);
+      return null;
+    }
+
+    return session;
+  } catch (error) {
+    console.error("Session retrieval error:", error);
+    return null;
+  }
+}
+
+async function deleteSession(env, sessionId) {
+  if (sessionId) {
+    await env.EMONAV_SESSIONS.delete(sessionId);
+  }
+}
+
 async function requireSession(request, env) {
   const cookies = parseCookies(request);
-  const token = cookies[COOKIE_SESSION];
-  if (!token) return null;
-  return verifyToken(token, env.SESSION_SECRET);
+  const sessionId = cookies[COOKIE_SESSION];
+  if (!sessionId) return null;
+  return getSession(env, sessionId);
 }
 
 async function handleGoogleLogin(request, env) {
@@ -215,20 +218,19 @@ async function handleGoogleCallback(request, env) {
   }
   const profile = await profileRes.json();
 
-  const sessionPayload = {
+  const sessionData = {
     sub: profile.sub,
     email: profile.email,
     name: profile.name,
-    picture: profile.picture,
-    exp: Date.now() + 7 * 24 * 60 * 60 * 1000
+    picture: profile.picture
   };
-  const sessionToken = await signToken(sessionPayload, env.SESSION_SECRET);
+  const sessionId = await createSession(env, sessionData);
 
   const headers = new Headers({
     location: "/",
     "cache-control": "no-store"
   });
-  headers.append("set-cookie", secureCookie(COOKIE_SESSION, sessionToken, 7 * 24 * 60 * 60, "Strict"));
+  headers.append("set-cookie", secureCookie(COOKIE_SESSION, sessionId, 7 * 24 * 60 * 60, "Strict"));
   headers.append("set-cookie", clearCookie(COOKIE_OAUTH_STATE));
 
   return new Response(null, {
@@ -238,7 +240,6 @@ async function handleGoogleCallback(request, env) {
 }
 
 async function handleMe(request, env) {
-  if (!env.SESSION_SECRET) return json({ error: "SESSION_SECRET not configured" }, 500);
   const session = await requireSession(request, env);
   if (!session) return json({ authenticated: false }, 401);
   return json({
@@ -251,7 +252,13 @@ async function handleMe(request, env) {
   });
 }
 
-async function handleLogout() {
+async function handleLogout(request, env) {
+  const cookies = parseCookies(request);
+  const sessionId = cookies[COOKIE_SESSION];
+  if (sessionId) {
+    await deleteSession(env, sessionId);
+  }
+
   return json(
     { ok: true },
     200,
@@ -363,7 +370,6 @@ function normalizeScore(value) {
 }
 
 async function handleInfer(request, env) {
-  if (!env.SESSION_SECRET) return json({ error: "SESSION_SECRET not configured" }, 500);
   const session = await requireSession(request, env);
   if (!session) return json({ error: "Unauthorized" }, 401);
 
