@@ -4,7 +4,7 @@ compatibility_date = "2026-03-22"
 
 [[kv_namespaces]]
 binding = "EMONAV_SESSIONS"
-id = "your_kv_namespace_id_here"
+id = "97e4daf877a7463e820c4137fbdb3132"
 
 [assets]
 directory = "."
