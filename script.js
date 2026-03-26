@@ -25,6 +25,7 @@ const alternativeNeedBtn = document.getElementById("alternativeNeedBtn");
 const alternativeNeedsSection = document.getElementById("alternativeNeedsSection");
 const alternativeNeedSelect = document.getElementById("alternativeNeedSelect");
 const submitAlternativeNeedBtn = document.getElementById("submitAlternativeNeedBtn");
+const alternativeNeedsMessage = document.getElementById("alternativeNeedsMessage");
 
 const resolutionSection = document.getElementById("resolutionSection");
 const groundingOutput = document.getElementById("groundingOutput");
@@ -282,11 +283,18 @@ function displayNeeds() {
       <h3>WHAT THIS MAY BE ASKING FOR:</h3>
       <p>Beneath what you expressed, there may be a need for ${need}.</p>
       <p>This is not a diagnosis. It is a direction to look.</p>
-      <p>One question worth sitting with: Is this a need you can meet for yourself right now — or does it require something from someone else?</p>
+      <p class="needs-question">
+        One question worth sitting with:
+        Is this a need you can meet for yourself right now —
+        or does it require something from someone else?
+      </p>
     </div>
   `;
 
   if (alternativeNeeds && alternativeNeeds.length > 0) {
+    alternativeNeedsMessage.textContent = `This could be pointing toward ${alternativeNeeds
+      .slice(0, 2)
+      .join(" or ")}. Which feels closer to true for you?`;
     alternativeNeedSelect.innerHTML = '<option value="">Select an option...</option>';
     alternativeNeeds.forEach(altNeed => {
       const option = document.createElement("option");
@@ -294,6 +302,9 @@ function displayNeeds() {
       option.textContent = altNeed;
       alternativeNeedSelect.appendChild(option);
     });
+  } else {
+    alternativeNeedsMessage.textContent = "";
+    alternativeNeedSelect.innerHTML = '<option value="">Select an option...</option>';
   }
 }
 

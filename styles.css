@@ -220,6 +220,18 @@ button:not(:disabled):hover {
   color: var(--accent);
 }
 
+.needs-question {
+  margin-top: 0.5rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.alternative-needs-message {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
 /* New EmoNav styles */
 .analysis-block {
   border-left: 4px solid var(--accent);
