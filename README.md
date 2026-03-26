@@ -1,42 +1,33 @@
 # EmoNav Voice Reflection App
 
-Voice reflection app with:
+A voice reflection tool that helps people hear themselves clearly, separate facts from the stories they construct, identify what they genuinely need, and take one honest step forward.
 
-- Google OAuth authentication
-- Secure session management with Cloudflare KV storage
-- Gemini AI inference from backend (API key never exposed to browser)
-- Cloudflare Worker API + Pages static hosting
+## Core Flow
 
-## Core flow
+1. **Record Voice Input** - User records their thoughts via speech-to-text
+2. **Body Check** - User reports physical sensations experienced while speaking
+3. **Event vs Story Separation** - Analysis separates observable facts from constructed interpretations
+4. **Needs Identification** - Identifies unmet needs beneath the expressed emotion
+5. **Grounding & Next Step** - Provides immediate calming techniques and one concrete action
+6. **End-of-Session Reflection** - User reflects on their experience for growth tracking
+7. **Growth Thread Pattern** - Identifies recurring patterns across sessions (after 2+ sessions)
 
-1. User signs in with Google.
-2. User records voice and sees transcript.
-3. User can hear:
-   - exact replay, and
-   - listener-perspective interpretation.
-4. On confirmation, backend calls Gemini for:
-   - emotion signal
-   - confidence score
-   - to-the-point score
-   - word-choice notes
-   - acknowledgment response
-   - immediate grounding actions
-5. App compares current metrics vs previous interaction (stored in local browser history).
-6. End-of-session reflection for growth tracking.
+## Psychological Framework
+
+- **Not a therapist or diagnosis tool** - Acts as a precise, honest mirror
+- **Mandatory language rules** - Uses observation-based language ("Your words carry signals that often accompany...")
+- **Event vs Story separation** - Distinguishes facts from interpretations
+- **Need identification** - Maps emotions to underlying unmet needs
+- **Action-oriented** - Provides one concrete, doable next step per session
 
 ## Architecture
 
 - Frontend: `index.html`, `styles.css`, `script.js`
 - Backend: Cloudflare Worker (`_worker.js`) with KV storage
 - Authentication: Google OAuth 2.0 with KV-based sessions
-- AI: Gemini API for emotional analysis
+- AI: Gemini API for structured psychological analysis
 - Storage: Cloudflare KV for session data, localStorage for user history
 - Static assets served through Cloudflare Pages
-- Auth/session:
-  - Google OAuth 2.0 login
-  - Session data stored in Cloudflare KV
-  - Session cookie: `HttpOnly; Secure; SameSite=Strict`
-  - OAuth state cookie: `HttpOnly; Secure; SameSite=Lax`
 
 ## Environment Variables
 

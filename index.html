@@ -50,114 +50,86 @@
         ></textarea>
         <div class="actions">
           <button id="playbackBtn">Listen: My Exact Words</button>
-          <button id="listenerPerspectiveBtn">
-            Listen: How It May Land For Others
-          </button>
-          <button id="confirmMeaningBtn">This Is What I Mean</button>
+          <button id="confirmTranscriptBtn">This Is What I Said</button>
         </div>
-        <p id="listenerPerspectiveOutput" class="listener-perspective">
-          Choose the second listen option to hear a listener-perspective
-          interpretation.
-        </p>
       </section>
 
-      <section class="card">
-        <h2>2) Supportive Acknowledgment</h2>
+      <section class="card" id="bodyCheckSection" hidden>
+        <h2>2) Body Check</h2>
+        <p id="bodyCheckQuestion"></p>
+        <label for="bodySignalInput">Your Body Signal</label>
+        <textarea
+          id="bodySignalInput"
+          rows="3"
+          placeholder="Describe any physical sensations..."
+        ></textarea>
         <div class="actions">
-          <button id="speakReplyBtn" disabled>Speak Acknowledgment</button>
-        </div>
-        <p id="replyOutput" class="reply">
-          Confirm your input to generate the response.
-        </p>
-      </section>
-
-      <section class="card">
-        <h2>3) Current Input Analysis</h2>
-        <div id="analysisGrid" class="analysis-grid">
-          <article>
-            <h3>Emotion Signals</h3>
-            <p id="emotionScore">-</p>
-          </article>
-          <article>
-            <h3>Confidence In Input</h3>
-            <p id="confidenceScore">-</p>
-          </article>
-          <article>
-            <h3>To-the-Point Score</h3>
-            <p id="pointScore">-</p>
-          </article>
-          <article>
-            <h3>Word Choice Notes</h3>
-            <p id="wordChoiceNotes">-</p>
-          </article>
+          <button id="submitBodyCheckBtn">Continue</button>
         </div>
       </section>
 
-      <section class="card">
-        <h2>4) Comparison With Last Interaction</h2>
-        <p id="comparisonOutput">
-          No previous interactions yet. Complete one confirmation to begin
-          trend tracking.
-        </p>
-      </section>
-
-      <section class="card">
-        <h2>5) Immediate Grounding Suggestions</h2>
+      <section class="card" id="analysisSection" hidden>
+        <h2>3) Event vs Story Separation</h2>
+        <div id="eventStoryOutput"></div>
         <div class="actions">
-          <button id="speakSupportBtn" disabled>Speak Grounding Steps</button>
+          <button id="confirmAnalysisBtn">This Matches My Experience</button>
+          <button id="correctAnalysisBtn">Something Feels Off</button>
         </div>
-        <p id="supportOutput" class="support-output">
-          Confirm your input to get tailored suggestions for calming and
-          returning to the present moment.
-        </p>
+        <div id="correctionSection" hidden>
+          <label for="correctedEmotion">What word would you use for what you were actually experiencing?</label>
+          <input type="text" id="correctedEmotion" placeholder="Your emotion word">
+          <button id="submitCorrectionBtn">Use This Instead</button>
+        </div>
       </section>
 
-      <section class="card">
+      <section class="card" id="needsSection" hidden>
+        <h2>4) What This May Be Asking For</h2>
+        <div id="needsOutput"></div>
+        <div class="actions">
+          <button id="confirmNeedBtn">This Feels Closer</button>
+          <button id="alternativeNeedBtn">Another Possibility</button>
+        </div>
+        <div id="alternativeNeedsSection" hidden>
+          <label for="alternativeNeed">Which feels closer to true for you?</label>
+          <select id="alternativeNeedSelect">
+            <option value="">Select an option...</option>
+          </select>
+          <button id="submitAlternativeNeedBtn">Continue With This</button>
+        </div>
+      </section>
+
+      <section class="card" id="resolutionSection" hidden>
+        <h2>5) Grounding & Next Step</h2>
+        <div id="groundingOutput"></div>
+        <div id="nextStepOutput"></div>
+      </section>
+
+      <section class="card" id="reflectionSection" hidden>
         <h2>6) End-of-Session Reflection</h2>
-        <p id="reflectionPrompt" class="reflection-prompt">
-          After some time has passed, reflect on your experience. This helps build growth threads and deeper self-awareness.
-        </p>
-        <div class="actions">
-          <button id="startReflectionBtn">Start Reflection</button>
-          <button id="speakReflectionBtn" disabled>Speak Reflection Questions</button>
-        </div>
-        <div id="reflectionQuestions" class="reflection-questions" hidden>
+        <div class="reflection-form">
           <label for="currentExperienceInput">What is your experience now?</label>
-          <textarea
-            id="currentExperienceInput"
-            rows="3"
-            placeholder="How are you feeling after the grounding exercises..."
-          ></textarea>
+          <textarea id="currentExperienceInput" rows="3" placeholder="How do you feel after going through this process?"></textarea>
           
-          <label for="triggerInput">What ignited your earlier emotional burst?</label>
-          <textarea
-            id="triggerInput"
-            rows="3"
-            placeholder="What triggered the initial feelings..."
-          ></textarea>
+          <label for="triggerInput">What was the original trigger?</label>
+          <textarea id="triggerInput" rows="3" placeholder="What sparked this emotional response?"></textarea>
           
-          <label for="specificFeelingInput">Did you feel fear, stuck between right/wrong, or something else?</label>
-          <textarea
-            id="specificFeelingInput"
-            rows="3"
-            placeholder="Describe the specific feeling or dilemma..."
-          ></textarea>
+          <label for="specificFeelingInput">What was the specific feeling?</label>
+          <textarea id="specificFeelingInput" rows="3" placeholder="Describe the exact emotion or dilemma you experienced."></textarea>
           
           <div class="actions">
-            <button id="saveReflectionBtn">Save Reflection & Build Growth Thread</button>
+            <button id="speakReflectionBtn">Speak My Reflection</button>
+            <button id="saveReflectionBtn">Save This Reflection</button>
           </div>
         </div>
-        <p id="growthThreadOutput" class="growth-thread">
-          Complete a reflection to see your growth insights.
-        </p>
       </section>
 
-      <section class="card">
-        <h2>Interaction History</h2>
+      <section class="card" id="growthThreadSection" hidden>
+        <h2>7) Growth Thread Pattern</h2>
+        <div id="growthThreadOutput"></div>
         <div class="actions">
-          <button id="clearHistoryBtn">Clear History</button>
+          <button id="changePatternBtn">Change It</button>
+          <button id="understandPatternBtn">Understand It Better First</button>
         </div>
-        <ul id="historyList" class="history-list"></ul>
       </section>
     </main>
     <script src="./script.js"></script>

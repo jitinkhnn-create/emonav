@@ -268,68 +268,124 @@ async function handleLogout(request, env) {
   );
 }
 
-function fallbackInference(input, previous) {
+function fallbackInference(input, bodySignal, previous) {
   const text = (input || "").toLowerCase();
+
+  // Simple emotion detection
   const distressHints = ["anxious", "scared", "sad", "overwhelmed", "angry", "lost"];
   const distressCount = distressHints.reduce((acc, w) => acc + (text.includes(w) ? 1 : 0), 0);
-  const emotionLabel =
-    distressCount >= 2 ? "Emotionally heavy / distressed" : "Mixed emotions / neutral";
+  const emotion = distressCount >= 2
+    ? "Your words carry signals that often accompany emotional distress."
+    : "Your words carry signals that often accompany mixed or neutral emotional states.";
 
-  const confidenceScore = Math.max(
-    20,
-    Math.min(90, 55 + (text.includes("i will") ? 20 : 0) - (text.includes("maybe") ? 15 : 0))
-  );
-  const pointScore = Math.max(20, Math.min(95, 85 - (text.split(/\s+/).length > 40 ? 20 : 0)));
-  const words = text
-    .split(/\W+/)
-    .filter((w) => w && w.length > 2)
-    .slice(0, 8);
-  const previousWords = (previous || "")
-    .toLowerCase()
-    .split(/\W+/)
-    .filter((w) => w && w.length > 2);
-  const newWords = words.filter((w) => !previousWords.includes(w)).slice(0, 5);
+  // Extract basic event (simplified)
+  const event = "The transcript describes a situation where the speaker experienced some form of difficulty or challenge.";
+
+  // Extract basic story (simplified)
+  const story = "This situation means that something important is being threatened or lost.";
+
+  // Basic need identification
+  const need = distressCount >= 2 ? "safety and support" : "clarity and understanding";
+
+  // Grounding steps
+  const grounding = "Take three slow, deep breaths. Name three things you can see around you. Name two things you can hear. Name one thing you can feel with your hands.";
+
+  // Next step
+  const nextStep = "Write down one thing you can do today that would make you feel a little more in control of your situation.";
+
+  // Alignment
+  const alignment = bodySignal
+    ? "Your body and words appear to be in agreement based on the signals reported."
+    : "No body signal was noticed. This is common when we are more in our head than in our body during an experience.";
 
   return {
-    emotionLabel,
-    confidenceScore,
-    pointScore,
-    wordChoiceNotes: `New repeated words: ${newWords.join(", ") || "none notable"}.`,
-    listenerPerspective:
-      "A listener may hear vulnerability and a need for clear support. Add one direct sentence with your exact need.",
-    acknowledgment:
-      "Thank you for sharing openly. You are focused, and these thoughts are temporary. Other areas of life can still remain stable and good.",
-    supportSuggestions:
-      "Take 5 deep breaths. Pause for 5 minutes before reacting. Ground yourself by naming 3 things you can see, 2 you can hear, and 1 you can feel."
+    event,
+    story,
+    emotion,
+    need,
+    alternativeNeeds: ["connection", "autonomy"],
+    grounding,
+    nextStep,
+    alignment
   };
 }
 
-async function callGemini(env, input, previousInput) {
+async function callGemini(env, input, bodySignal, previousInput) {
   requireEnv(env, ["GEMINI_API_KEY"]);
   const model = env.GEMINI_MODEL || "gemini-2.0-flash";
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
 
   const prompt = [
-    "You are an emotional reflection assistant. Return strict JSON only.",
-    "Analyze current user input and optionally compare with previous input.",
-    "JSON schema:",
+    "You are EmoNav — a voice reflection tool that helps people hear themselves clearly, separate facts from the stories they construct, identify what they genuinely need, and take one honest step forward.",
+    "You are not a therapist. You are not a diagnosis tool. You are a mirror — precise, honest, and non-judgmental.",
+    "",
+    "MANDATORY LANGUAGE RULES:",
+    "NEVER USE: 'You are feeling [emotion]', 'Emotion detected: [emotion]', 'This indicates [emotion or state]', 'You are experiencing [condition]'",
+    "ALWAYS USE: 'Your words carry signals that often accompany [emotion]', 'There are patterns here that sometimes point toward [emotion]', 'This may reflect [emotion or state] — does that resonate?', 'One possibility here is [emotion]', 'Based on the language, this could be [finding] — you would know better than I do'",
+    "",
+    "ANALYZE THIS TRANSCRIPT:",
+    `"""${input}"""`,
+    "",
+    "BODY SIGNAL REPORTED:",
+    `"""${bodySignal || "No body signal reported"}"""`,
+    "",
+    "PREVIOUS SESSION TRANSCRIPT (for context only):",
+    `"""${previousInput || "No previous session"}"""`,
+    "",
+    "FOLLOW THIS EXACT STRUCTURE:",
+    "",
+    "1. EVENT ANALYSIS:",
+    "Extract only what is observable and unchallengeable. A fact is something a camera could have recorded.",
+    "Strip all interpretation words. Keep to 2–3 sentences maximum.",
+    "",
+    "2. STORY ANALYSIS:",
+    "Extract the interpretation — the meaning the user has constructed around the event.",
+    "Name it directly. Keep to 1–2 sentences.",
+    "",
+    "3. EMOTION IDENTIFICATION:",
+    "Based on the story layer, identify the most likely emotion.",
+    "Use the mandatory language rules above.",
+    "",
+    "4. NEED IDENTIFICATION:",
+    "Every difficult emotion signals an unmet need.",
+    "Using this mapping:",
+    "- Anger, Rage, Resentment → Need for: respect, fairness, autonomy, to be taken seriously",
+    "- Anxiety, Fear, Worry → Need for: safety, predictability, a sense of control, or certainty about an outcome",
+    "- Sadness, Grief, Emptiness → Need for: connection, acknowledgment, significance, or to matter to someone",
+    "- Frustration, Irritation → Need for: effectiveness, to be understood, or for things to make sense",
+    "- Guilt → Need for: integrity, to feel like a good person, or to maintain belonging",
+    "- Shame → Need for: unconditional acceptance, worth that is not conditional on performance",
+    "- Overwhelm → Need for: support, reduced load, or explicit permission to not be managing everything",
+    "- Loneliness → Need for: genuine connection, or to matter to one specific person",
+    "",
+    "5. GROUNDING STEPS:",
+    "Provide 3-5 concrete, immediate grounding actions.",
+    "Focus on physical sensations and present moment awareness.",
+    "",
+    "6. ONE CONCRETE NEXT STEP:",
+    "Suggest ONE specific, small, doable action the person can take in the next 24 hours.",
+    "Rules: Must be something they can do without requiring another person to change first.",
+    "Must be physical, written, or spoken — not internal.",
+    "Must connect directly to the identified need.",
+    "Must be proportionate to the situation.",
+    "",
+    "7. ALIGNMENT ANALYSIS:",
+    "Compare body signal with emotional language.",
+    "Determine if they appear in agreement, contradict, or if no body signal was noticed.",
+    "",
+    "RETURN JSON ONLY:",
     "{",
-    '  "emotionLabel": string,',
-    '  "confidenceScore": number,',
-    '  "pointScore": number,',
-    '  "wordChoiceNotes": string,',
-    '  "listenerPerspective": string,',
-    '  "acknowledgment": string,',
-    '  "supportSuggestions": string',
+    '  "event": "factual description (2-3 sentences max)",',
+    '  "story": "interpretation named directly (1-2 sentences)",',
+    '  "emotion": "emotion identification using mandatory language",',
+    '  "need": "primary unmet need",',
+    '  "alternativeNeeds": ["array of 1-2 alternative possibilities"],',
+    '  "grounding": "3-5 concrete grounding steps",',
+    '  "nextStep": "one concrete next step instruction",',
+    '  "alignment": "body-words alignment analysis"',
     "}",
-    "Constraints:",
-    "- confidenceScore and pointScore must be integers from 0 to 100.",
-    "- acknowledgment should be validating and mention thoughts can be temporary.",
-    "- supportSuggestions should include concrete immediate actions (breathing, pause, grounding).",
-    "- listenerPerspective should explain how message may land for another person.",
-    `Current input: """${input}"""`,
-    `Previous input: """${previousInput || ""}"""`,
-    "Return only JSON."
+    "",
+    "Return only the JSON. No additional text."
   ].join("\n");
 
   const res = await fetch(endpoint, {
@@ -353,13 +409,14 @@ async function callGemini(env, input, previousInput) {
   const parsed = JSON.parse(cleaned);
 
   return {
-    emotionLabel: String(parsed.emotionLabel || "Mixed emotions / neutral"),
-    confidenceScore: normalizeScore(parsed.confidenceScore),
-    pointScore: normalizeScore(parsed.pointScore),
-    wordChoiceNotes: String(parsed.wordChoiceNotes || ""),
-    listenerPerspective: String(parsed.listenerPerspective || ""),
-    acknowledgment: String(parsed.acknowledgment || ""),
-    supportSuggestions: String(parsed.supportSuggestions || "")
+    event: String(parsed.event || "Unable to extract factual event."),
+    story: String(parsed.story || "Unable to identify story layer."),
+    emotion: String(parsed.emotion || "Unable to identify emotion."),
+    need: String(parsed.need || "Unable to identify need."),
+    alternativeNeeds: Array.isArray(parsed.alternativeNeeds) ? parsed.alternativeNeeds : [],
+    grounding: String(parsed.grounding || "Take three deep breaths. Name three things you can see. Name two things you can hear. Name one thing you can feel."),
+    nextStep: String(parsed.nextStep || "Write one sentence describing what you actually needed in that moment."),
+    alignment: String(parsed.alignment || "Unable to analyze alignment.")
   };
 }
 
@@ -381,14 +438,15 @@ async function handleInfer(request, env) {
   }
 
   const input = String(body?.input || "").trim();
+  const bodySignal = String(body?.bodySignal || "").trim();
   const previousInput = String(body?.previousInput || "").trim();
   if (!input) return json({ error: "input is required" }, 400);
 
   try {
-    const result = await callGemini(env, input, previousInput);
+    const result = await callGemini(env, input, bodySignal, previousInput);
     return json({ ok: true, result });
   } catch (err) {
-    const fallback = fallbackInference(input, previousInput);
+    const fallback = fallbackInference(input, bodySignal, previousInput);
     return json({
       ok: true,
       result: fallback,

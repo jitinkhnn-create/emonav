@@ -199,6 +199,86 @@ button:not(:disabled):hover {
   margin: 0;
 }
 
+/* New EmoNav styles */
+.analysis-block {
+  border-left: 4px solid var(--accent);
+  background: #fff3ea;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.analysis-block h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
+.analysis-block p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.bridging-statement {
+  font-style: italic;
+  color: var(--ink);
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: #f9f6f2;
+  border-radius: 8px;
+}
+
+.confirmation-question {
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.needs-block {
+  border-left: 4px solid #2d6b4f;
+  background: #f0f8f4;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.needs-block h3 {
+  margin: 0 0 0.5rem 0;
+  color: #2d6b4f;
+  font-size: 1.1rem;
+}
+
+.needs-block p {
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.reflection-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.reflection-form label {
+  margin-top: 0.5rem;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.history-list li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--panel);
+}
+
+.history-list li strong {
+  color: var(--accent);
+}
+
 .history-list {
   padding-left: 1.2rem;
   margin: 0;

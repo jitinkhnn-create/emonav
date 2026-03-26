@@ -1,3 +1,4 @@
+
 # EmoNav Voice Reflection - Hosting Guide
 
 This guide provides complete instructions for hosting the EmoNav Voice Reflection app using Cloudflare Workers and Pages with KV storage for sessions and secrets.
