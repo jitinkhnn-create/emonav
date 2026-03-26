@@ -199,6 +199,27 @@ button:not(:disabled):hover {
   margin: 0;
 }
 
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.history-list li {
+  padding: 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #fff, #fff8f3);
+  font-size: 0.95rem;
+}
+
+.history-list li strong {
+  color: var(--accent);
+}
+
 /* New EmoNav styles */
 .analysis-block {
   border-left: 4px solid var(--accent);
@@ -259,34 +280,6 @@ button:not(:disabled):hover {
 
 .reflection-form label {
   margin-top: 0.5rem;
-}
-
-.history-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.history-list li {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  background: var(--panel);
-}
-
-.history-list li strong {
-  color: var(--accent);
-}
-
-.history-list {
-  padding-left: 1.2rem;
-  margin: 0;
-}
-
-.history-list li {
-  margin: 0.45rem 0;
-  line-height: 1.35;
 }
 
 @media (max-width: 700px) {
