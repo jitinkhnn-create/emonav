@@ -184,7 +184,11 @@ function confirmTranscript() {
   }
 
   // Show body check section
-  bodyCheckQuestion.textContent = "Before we look at what you said — where did you feel this in your body while you were speaking?\n\nFor example: chest tight, stomach heavy, throat closed, shoulders raised, jaw clenched, hands restless, breath shallow — or nothing noticeable.\n\nThere is no right answer. Even 'I didn't notice anything' is useful information.";
+  bodyCheckQuestion.textContent = `Before we look at what you said — where did you feel this in your body while you were speaking?
+
+For example: chest tight, stomach heavy, throat closed, shoulders raised, jaw clenched, hands restless, breath shallow — or nothing noticeable.
+
+There is no right answer. Even 'I didn't notice anything' is useful information.`;
   bodyCheckSection.hidden = false;
   analysisSection.hidden = true;
   needsSection.hidden = true;
