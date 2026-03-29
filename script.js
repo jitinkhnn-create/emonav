@@ -3,6 +3,7 @@ const startListeningBtn = document.getElementById("startListeningBtn");
 const stopListeningBtn = document.getElementById("stopListeningBtn");
 const clearCurrentBtn = document.getElementById("clearCurrentBtn");
 const playbackBtn = document.getElementById("playbackBtn");
+const listenerPerspectiveBtn = document.getElementById("listenerPerspectiveBtn");
 const confirmTranscriptBtn = document.getElementById("confirmTranscriptBtn");
 
 const bodyCheckSection = document.getElementById("bodyCheckSection");
@@ -66,6 +67,7 @@ let sessionHistory = [];
 // Speech recognition
 let recognition = null;
 let isListening = false;
+let accumulatedTranscript = "";
 
 // Initialize
 document.addEventListener("DOMContentLoaded", init);
@@ -109,6 +111,7 @@ function setupEventListeners() {
   stopListeningBtn.addEventListener("click", stopListening);
   clearCurrentBtn.addEventListener("click", clearCurrent);
   playbackBtn.addEventListener("click", () => speakText(transcriptInput.value));
+  listenerPerspectiveBtn.addEventListener("click", playListenerPerspective);
   confirmTranscriptBtn.addEventListener("click", confirmTranscript);
 
   // Body check
@@ -140,6 +143,8 @@ function setupEventListeners() {
 function startListening() {
   if (!recognition) return;
   transcriptInput.value = "";
+  accumulatedTranscript = "";
+  listenerPerspectiveBtn.disabled = true;
   recognition.start();
 }
 
@@ -152,22 +157,22 @@ function clearCurrent() {
   transcriptInput.value = "";
   hideAllSections();
   setStatus("Idle", false);
+  listenerPerspectiveBtn.disabled = true;
 }
 
 function handleSpeechResult(event) {
-  let finalTranscript = "";
   let interimTranscript = "";
 
   for (let i = event.resultIndex; i < event.results.length; i++) {
     const transcript = event.results[i][0].transcript;
     if (event.results[i].isFinal) {
-      finalTranscript += transcript;
+      accumulatedTranscript += transcript;
     } else {
       interimTranscript += transcript;
     }
   }
 
-  transcriptInput.value = finalTranscript + interimTranscript;
+  transcriptInput.value = accumulatedTranscript + interimTranscript;
 }
 
 function setStatus(text, listening = false) {
@@ -239,6 +244,7 @@ async function generateAnalysis() {
 
 function displayAnalysis() {
   const { event, story, emotion, need, grounding, nextStep } = analysisResult;
+  listenerPerspectiveBtn.disabled = false;
 
   eventStoryOutput.innerHTML = `
     <div class="analysis-block">
@@ -253,6 +259,10 @@ function displayAnalysis() {
       The emotion you are feeling is almost certainly a response to the story — not the event. This is not a flaw. It is how human emotion works. The question worth sitting with is: how certain are you that the story is true?
     </p>
     <p class="confirmation-question">Does this reading match what you were actually experiencing — or does something feel off about it?</p>
+    <div class="listener-perspective">
+      <h3>LISTENER PERSPECTIVE</h3>
+      <p>How this may sound to someone listening: ${story}</p>
+    </div>
   `;
 }
 
@@ -351,6 +361,14 @@ function speakReflection() {
     Specific feeling: ${specificFeelingInput.value}
   `;
   speakText(reflectionText);
+}
+
+function playListenerPerspective() {
+  if (!analysisResult || !analysisResult.story) {
+    alert("Listener perspective is available after the analysis is complete.");
+    return;
+  }
+  speakText(`Listener perspective: ${analysisResult.story}`);
 }
 
 function saveReflection() {
