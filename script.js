@@ -52,6 +52,7 @@ const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 
 const transcriptInput = document.getElementById("transcriptInput");
 const statusEl = document.getElementById("status");
+const analysisErrorEl = document.getElementById("analysisError");
 const historyListEl = document.getElementById("historyList");
 
 const STORAGE_KEY = "emonav_voice_reflections_v2";
@@ -79,6 +80,7 @@ function init() {
   checkAuth();
   loadHistory();
   updateListenerPerspectiveState();
+  clearAnalysisError();
 }
 
 function setupSpeechRecognition() {
@@ -114,7 +116,7 @@ function setupEventListeners() {
   clearCurrentBtn.addEventListener("click", clearCurrent);
   playbackBtn.addEventListener("click", () => speakText(transcriptInput.value));
   listenerPerspectiveBtn.addEventListener("click", playListenerPerspective);
-  transcriptInput.addEventListener("input", updateListenerPerspectiveState);
+  transcriptInput.addEventListener("input", handleTranscriptInputChange);
   confirmTranscriptBtn.addEventListener("click", confirmTranscript);
 
   // Body check
@@ -149,6 +151,9 @@ function startListening() {
   accumulatedTranscript = "";
   listenerPerspectiveBtn.disabled = true;
   listenerPerspectiveText = "";
+  analysisResult = null;
+  hideAllSections();
+  clearAnalysisError();
   recognition.start();
 }
 
@@ -161,8 +166,10 @@ function clearCurrent() {
   transcriptInput.value = "";
   hideAllSections();
   setStatus("Idle", false);
-  updateListenerPerspectiveState();
+  listenerPerspectiveBtn.disabled = true;
   listenerPerspectiveText = "";
+  analysisResult = null;
+  clearAnalysisError();
 }
 
 function handleSpeechResult(event) {
@@ -178,7 +185,6 @@ function handleSpeechResult(event) {
   }
 
   transcriptInput.value = accumulatedTranscript + interimTranscript;
-  updateListenerPerspectiveState();
 }
 
 function setStatus(text, listening = false) {
@@ -223,6 +229,7 @@ async function generateAnalysis() {
     return;
   }
 
+  clearAnalysisError();
   try {
     const response = await fetch("/api/infer", {
       method: "POST",
@@ -234,26 +241,40 @@ async function generateAnalysis() {
       })
     });
 
-    if (!response.ok) throw new Error("Analysis failed");
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.ok) {
+      const errorPayload = data?.error || {};
+      const apiMessage = [
+        errorPayload.message || data?.message || `Request failed with status ${response.status}`,
+        errorPayload.status ? `status ${errorPayload.status}` : "",
+        errorPayload.statusText ? errorPayload.statusText : "",
+        errorPayload.details ? `details: ${String(errorPayload.details).slice(0, 300)}` : ""
+      ].filter(Boolean).join(" | ");
+      throw new Error(apiMessage);
+    }
 
-    const result = await response.json();
-    analysisResult = result.result;
+    analysisResult = data.result;
 
     displayAnalysis();
     analysisSection.hidden = false;
 
   } catch (error) {
     console.error("Analysis error:", error);
-    alert("Failed to generate analysis. Please try again.");
+    analysisSection.hidden = true;
+    needsSection.hidden = true;
+    resolutionSection.hidden = true;
+    reflectionSection.hidden = true;
+    growthThreadSection.hidden = true;
+    showAnalysisError(error.message || "Gemini failed to answer.");
+    alert(`AI analysis failed: ${error.message || "unknown error"}`);
   }
 }
 
 function displayAnalysis() {
   const { event, story, emotion, need, grounding, nextStep } = analysisResult;
-  listenerPerspectiveBtn.disabled = false;
   const safeStory = story || "what you just shared";
-  const listenerNote = createListenerPerspectiveSentence(analysisResult.listenerPerspective, safeStory);
-  listenerPerspectiveText = listenerNote || "";
+  listenerPerspectiveText = (analysisResult.listenerPerspective || "").trim();
+  updateListenerPerspectiveState();
   const bridgingCopy = story
     ? `We separated what happened from what you are saying it means. Read the story out loud: "${safeStory}". How sure do you feel that this version matches what actually happened?`
     : "We separated the facts from the meaning you gave them. Notice where the two feel different or the same.";
@@ -272,7 +293,7 @@ function displayAnalysis() {
     <p class="confirmation-question">${confirmationText}</p>
     <div class="listener-perspective">
       <h3>LISTENER PERSPECTIVE</h3>
-      <p>${listenerNote || `How this may sound to someone listening: ${safeStory}`}</p>
+      <p>${listenerPerspectiveText || "Listener perspective was not returned by the model."}</p>
     </div>
   `;
 }
@@ -375,32 +396,38 @@ function playListenerPerspective() {
     return;
   }
 
-  const transcriptText = transcriptInput.value.trim();
-  if (transcriptText) {
-    speakText(`Listener perspective guess: ${transcriptText}`);
-    return;
-  }
-
-  alert("Record something first.");
+  alert("Listener perspective is not available yet because the AI did not return it.");
 }
 
 function updateListenerPerspectiveState() {
-  listenerPerspectiveBtn.disabled = !transcriptInput.value.trim();
+  listenerPerspectiveBtn.disabled = !listenerPerspectiveText;
 }
 
-function createListenerPerspectiveSentence(preferred, fallbackStory) {
-  const raw = (preferred || fallbackStory || "").trim();
-  if (!raw) return "";
-
-  const unquoted = raw.replace(/^"+|"+$/g, "").replace(/\s+/g, " ");
-  const trimmed = unquoted.replace(/[.?!]*$/, "");
-  if (!trimmed) return "";
-
-  if (/^it may\b/i.test(trimmed) || /^it sounds\b/i.test(trimmed)) {
-    return `${trimmed}.`;
+function handleTranscriptInputChange() {
+  if (analysisResult) {
+    analysisResult = null;
+    listenerPerspectiveText = "";
+    analysisSection.hidden = true;
+    needsSection.hidden = true;
+    resolutionSection.hidden = true;
+    reflectionSection.hidden = true;
+    growthThreadSection.hidden = true;
   }
+  updateListenerPerspectiveState();
+}
 
-  return `It may sound like ${trimmed}.`;
+function showAnalysisError(message) {
+  if (!analysisErrorEl) return;
+  analysisErrorEl.textContent = `AI analysis failed: ${message}`;
+  analysisErrorEl.hidden = false;
+  analysisErrorEl.classList.add("status-error");
+}
+
+function clearAnalysisError() {
+  if (!analysisErrorEl) return;
+  analysisErrorEl.textContent = "";
+  analysisErrorEl.hidden = true;
+  analysisErrorEl.classList.remove("status-error");
 }
 
 function saveReflection() {

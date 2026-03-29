@@ -268,86 +268,6 @@ async function handleLogout(request, env) {
   );
 }
 
-function splitIntoSentences(text) {
-  if (!text) return [];
-  return text
-    .replace(/\s+/g, " ")
-    .split(/(?<=[.!?])\s+/)
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-}
-
-function guessEventFromInput(text) {
-  const sentences = splitIntoSentences(text);
-  if (sentences.length) return sentences[0];
-  if (text) return text.trim();
-  return "The transcript describes a personal challenge.";
-}
-
-function guessStoryFromInput(text) {
-  const trimmed = text || "";
-  const sentences = splitIntoSentences(trimmed);
-  const lower = trimmed.toLowerCase();
-  const reasonMatch = lower.match(/\b(?:because|since|as|so|after|that)\b\s+([^.!?\n]+)/i);
-  if (reasonMatch && reasonMatch[1]) {
-    return `It may mean ${reasonMatch[1].split(/[.!?]/)[0].trim()}.`;
-  }
-
-  if (sentences.length > 1) {
-    return `It feels like you are saying, "${sentences.slice(1).join(" ")}".`;
-  }
-
-  if (trimmed) {
-    return "It may feel like something important is at risk or missing.";
-  }
-
-  return "It may feel like you are trying to make sense of a difficult moment.";
-}
-
-function fallbackInference(input, bodySignal, previous) {
-  const text = (input || "").trim();
-
-  // Simple emotion detection
-  const distressHints = ["anxious", "scared", "sad", "overwhelmed", "angry", "lost"];
-  const lower = text.toLowerCase();
-  const distressCount = distressHints.reduce((acc, w) => acc + (lower.includes(w) ? 1 : 0), 0);
-  const emotion = distressCount >= 2
-    ? "Your words carry signals that often accompany emotional distress."
-    : "Your words carry signals that often accompany mixed or neutral emotional states.";
-
-  // Extract basic event (simplified)
-  const event = guessEventFromInput(text);
-
-  // Extract basic story (simplified)
-  const story = guessStoryFromInput(text);
-
-  // Basic need identification
-  const need = distressCount >= 2 ? "safety and support" : "clarity and understanding";
-
-  // Grounding steps
-  const grounding = "Take three slow, deep breaths. Name three things you can see around you. Name two things you can hear. Name one thing you can feel with your hands.";
-
-  // Next step
-  const nextStep = "Write down one thing you can do today that would make you feel a little more in control of your situation.";
-
-  // Alignment
-  const alignment = bodySignal
-    ? "Your body and words appear to be in agreement based on the signals reported."
-    : "No body signal was noticed. This is common when we are more in our head than in our body during an experience.";
-
-  return {
-    event,
-    story,
-    emotion,
-    need,
-    alternativeNeeds: ["connection", "autonomy"],
-    grounding,
-    nextStep,
-    alignment,
-    listenerPerspective: story
-  };
-}
-
 async function callGemini(env, input, bodySignal, previousInput) {
   requireEnv(env, ["GEMINI_API_KEY"]);
   const model = env.GEMINI_MODEL || "gemini-2.0-flash";
@@ -415,6 +335,7 @@ async function callGemini(env, input, bodySignal, previousInput) {
     "",
     "8. LISTENER PERSPECTIVE (for the frontend button):",
     "Summarize how somebody else might hear the speaker’s story, in a single sentence that notes the tone or vibe (e.g., \"It may sound like you are warning that x will happen if y doesn’t change\").",
+    "Do not repeat the transcript or story verbatim. Keep it as an outside listener’s interpretation, not a quote-back.",
 
     "",
     "RETURN JSON ONLY:",
@@ -445,24 +366,71 @@ async function callGemini(env, input, bodySignal, previousInput) {
   });
 
   if (!res.ok) {
-    throw new Error(`Gemini call failed: ${res.status}`);
+    const errorText = await res.text().catch(() => "");
+    let errorDetail = errorText || res.statusText || "Gemini request failed";
+    try {
+      const parsedError = JSON.parse(errorText);
+      errorDetail = parsedError?.error?.message || parsedError?.error?.details || errorDetail;
+    } catch {
+      // Keep the raw text if it is not JSON.
+    }
+
+    const error = new Error(errorDetail);
+    error.status = res.status;
+    error.statusText = res.statusText;
+    error.details = errorText;
+    throw error;
   }
 
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch (parseErr) {
+    const error = new Error(`Gemini returned unreadable JSON: ${parseErr.message}`);
+    error.status = 502;
+    error.details = "";
+    throw error;
+  }
+
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  if (!text) {
+    const apiError = data?.error?.message || data?.promptFeedback?.blockReason || "Gemini returned no analysis text.";
+    const error = new Error(String(apiError));
+    error.status = 502;
+    error.details = JSON.stringify(data);
+    throw error;
+  }
+
   const cleaned = text.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
-  const parsed = JSON.parse(cleaned);
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (parseErr) {
+    const error = new Error(`Gemini returned invalid JSON: ${parseErr.message}`);
+    error.status = 502;
+    error.details = cleaned;
+    throw error;
+  }
+
+  const requiredFields = ["event", "story", "emotion", "need", "grounding", "nextStep", "alignment", "listenerPerspective"];
+  const missingFields = requiredFields.filter((field) => !String(parsed[field] || "").trim());
+  if (missingFields.length) {
+    const error = new Error(`Gemini response missing required field(s): ${missingFields.join(", ")}`);
+    error.status = 502;
+    error.details = cleaned;
+    throw error;
+  }
 
   return {
-    event: String(parsed.event || "Unable to extract factual event."),
-    story: String(parsed.story || "Unable to identify story layer."),
-    emotion: String(parsed.emotion || "Unable to identify emotion."),
-    need: String(parsed.need || "Unable to identify need."),
+    event: String(parsed.event).trim(),
+    story: String(parsed.story).trim(),
+    emotion: String(parsed.emotion).trim(),
+    need: String(parsed.need).trim(),
     alternativeNeeds: Array.isArray(parsed.alternativeNeeds) ? parsed.alternativeNeeds : [],
-    grounding: String(parsed.grounding || "Take three deep breaths. Name three things you can see. Name two things you can hear. Name one thing you can feel."),
-    nextStep: String(parsed.nextStep || "Write one sentence describing what you actually needed in that moment."),
-    alignment: String(parsed.alignment || "Unable to analyze alignment."),
-    listenerPerspective: String(parsed.listenerPerspective || parsed.story || "Unable to summarize listener perspective.")
+    grounding: String(parsed.grounding).trim(),
+    nextStep: String(parsed.nextStep).trim(),
+    alignment: String(parsed.alignment).trim(),
+    listenerPerspective: String(parsed.listenerPerspective).trim()
   };
 }
 
@@ -492,11 +460,14 @@ async function handleInfer(request, env) {
     const result = await callGemini(env, input, bodySignal, previousInput);
     return json({ ok: true, result });
   } catch (err) {
-    const fallback = fallbackInference(input, bodySignal, previousInput);
     return json({
-      ok: true,
-      result: fallback,
-      warning: `Gemini unavailable, fallback used: ${err.message}`
-    });
+      ok: false,
+      error: {
+        message: err.message || "Gemini unavailable",
+        status: err.status || 502,
+        statusText: err.statusText || "Bad Gateway",
+        details: err.details || ""
+      }
+    }, err.status || 502);
   }
 }

@@ -128,6 +128,14 @@ button:not(:disabled):hover {
   font-weight: 600;
 }
 
+.status-error {
+  color: #9f1d1d;
+  background: #fdecec;
+  border: 1px solid #f2b8b8;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
 .reply {
   border-left: 4px solid var(--ok);
   background: #f1f8f3;
