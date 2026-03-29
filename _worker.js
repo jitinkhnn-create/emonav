@@ -343,7 +343,8 @@ function fallbackInference(input, bodySignal, previous) {
     alternativeNeeds: ["connection", "autonomy"],
     grounding,
     nextStep,
-    alignment
+    alignment,
+    listenerPerspective: story
   };
 }
 
@@ -374,10 +375,12 @@ async function callGemini(env, input, bodySignal, previousInput) {
     "1. EVENT ANALYSIS:",
     "Extract only what is observable and unchallengeable. A fact is something a camera could have recorded.",
     "Strip all interpretation words. Keep to 2–3 sentences maximum.",
+    "Whenever possible, mention specific words or details from the transcript so each event feels tied to the user’s actual phrasing.",
     "",
     "2. STORY ANALYSIS:",
     "Extract the interpretation — the meaning the user has constructed around the event.",
     "Name it directly. Keep to 1–2 sentences.",
+    "Use the user’s own words where possible so the story never sounds generic. Avoid repeating the same canned sentence.",
     "",
     "3. EMOTION IDENTIFICATION:",
     "Based on the story layer, identify the most likely emotion.",
@@ -410,6 +413,10 @@ async function callGemini(env, input, bodySignal, previousInput) {
     "Compare body signal with emotional language.",
     "Determine if they appear in agreement, contradict, or if no body signal was noticed.",
     "",
+    "8. LISTENER PERSPECTIVE (for the frontend button):",
+    "Summarize how somebody else might hear the speaker’s story, in a single sentence that notes the tone or vibe (e.g., \"It may sound like you are warning that x will happen if y doesn’t change\").",
+
+    "",
     "RETURN JSON ONLY:",
     "{",
     '  "event": "factual description (2-3 sentences max)",',
@@ -419,7 +426,8 @@ async function callGemini(env, input, bodySignal, previousInput) {
     '  "alternativeNeeds": ["array of 1-2 alternative possibilities"],',
     '  "grounding": "3-5 concrete grounding steps",',
     '  "nextStep": "one concrete next step instruction",',
-    '  "alignment": "body-words alignment analysis"',
+    '  "alignment": "body-words alignment analysis",',
+    '  "listenerPerspective": "how another person might hear the story, single sentence"',
     "}",
     "",
     "Return only the JSON. No additional text."
@@ -453,7 +461,8 @@ async function callGemini(env, input, bodySignal, previousInput) {
     alternativeNeeds: Array.isArray(parsed.alternativeNeeds) ? parsed.alternativeNeeds : [],
     grounding: String(parsed.grounding || "Take three deep breaths. Name three things you can see. Name two things you can hear. Name one thing you can feel."),
     nextStep: String(parsed.nextStep || "Write one sentence describing what you actually needed in that moment."),
-    alignment: String(parsed.alignment || "Unable to analyze alignment.")
+    alignment: String(parsed.alignment || "Unable to analyze alignment."),
+    listenerPerspective: String(parsed.listenerPerspective || parsed.story || "Unable to summarize listener perspective.")
   };
 }
 

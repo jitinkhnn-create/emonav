@@ -365,7 +365,7 @@ function speakReflection() {
 }
 
 function playListenerPerspective() {
-  const storyText = analysisResult?.story?.trim();
+  const storyText = analysisResult?.listenerPerspective?.trim() || analysisResult?.story?.trim();
   const transcriptText = transcriptInput.value.trim();
 
   if (storyText) {
