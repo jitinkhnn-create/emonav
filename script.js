@@ -77,6 +77,7 @@ function init() {
   setupEventListeners();
   checkAuth();
   loadHistory();
+  updateListenerPerspectiveState();
 }
 
 function setupSpeechRecognition() {
@@ -112,6 +113,7 @@ function setupEventListeners() {
   clearCurrentBtn.addEventListener("click", clearCurrent);
   playbackBtn.addEventListener("click", () => speakText(transcriptInput.value));
   listenerPerspectiveBtn.addEventListener("click", playListenerPerspective);
+  transcriptInput.addEventListener("input", updateListenerPerspectiveState);
   confirmTranscriptBtn.addEventListener("click", confirmTranscript);
 
   // Body check
@@ -157,7 +159,7 @@ function clearCurrent() {
   transcriptInput.value = "";
   hideAllSections();
   setStatus("Idle", false);
-  listenerPerspectiveBtn.disabled = true;
+  updateListenerPerspectiveState();
 }
 
 function handleSpeechResult(event) {
@@ -173,6 +175,7 @@ function handleSpeechResult(event) {
   }
 
   transcriptInput.value = accumulatedTranscript + interimTranscript;
+  updateListenerPerspectiveState();
 }
 
 function setStatus(text, listening = false) {
@@ -362,11 +365,24 @@ function speakReflection() {
 }
 
 function playListenerPerspective() {
-  if (!analysisResult || !analysisResult.story) {
-    alert("Listener perspective is available after the analysis is complete.");
+  const storyText = analysisResult?.story?.trim();
+  const transcriptText = transcriptInput.value.trim();
+
+  if (storyText) {
+    speakText(`Listener perspective: ${storyText}`);
     return;
   }
-  speakText(`Listener perspective: ${analysisResult.story}`);
+
+  if (transcriptText) {
+    speakText(`Listener perspective guess: ${transcriptText}`);
+    return;
+  }
+
+  alert("Record something first.");
+}
+
+function updateListenerPerspectiveState() {
+  listenerPerspectiveBtn.disabled = !transcriptInput.value.trim();
 }
 
 function saveReflection() {

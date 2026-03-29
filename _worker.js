@@ -268,21 +268,58 @@ async function handleLogout(request, env) {
   );
 }
 
+function splitIntoSentences(text) {
+  if (!text) return [];
+  return text
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
+function guessEventFromInput(text) {
+  const sentences = splitIntoSentences(text);
+  if (sentences.length) return sentences[0];
+  if (text) return text.trim();
+  return "The transcript describes a personal challenge.";
+}
+
+function guessStoryFromInput(text) {
+  const trimmed = text || "";
+  const sentences = splitIntoSentences(trimmed);
+  const lower = trimmed.toLowerCase();
+  const reasonMatch = lower.match(/\b(?:because|since|as|so|after|that)\b\s+([^.!?\n]+)/i);
+  if (reasonMatch && reasonMatch[1]) {
+    return `It may mean ${reasonMatch[1].split(/[.!?]/)[0].trim()}.`;
+  }
+
+  if (sentences.length > 1) {
+    return `It feels like you are saying, "${sentences.slice(1).join(" ")}".`;
+  }
+
+  if (trimmed) {
+    return "It may feel like something important is at risk or missing.";
+  }
+
+  return "It may feel like you are trying to make sense of a difficult moment.";
+}
+
 function fallbackInference(input, bodySignal, previous) {
-  const text = (input || "").toLowerCase();
+  const text = (input || "").trim();
 
   // Simple emotion detection
   const distressHints = ["anxious", "scared", "sad", "overwhelmed", "angry", "lost"];
-  const distressCount = distressHints.reduce((acc, w) => acc + (text.includes(w) ? 1 : 0), 0);
+  const lower = text.toLowerCase();
+  const distressCount = distressHints.reduce((acc, w) => acc + (lower.includes(w) ? 1 : 0), 0);
   const emotion = distressCount >= 2
     ? "Your words carry signals that often accompany emotional distress."
     : "Your words carry signals that often accompany mixed or neutral emotional states.";
 
   // Extract basic event (simplified)
-  const event = "The transcript describes a situation where the speaker experienced some form of difficulty or challenge.";
+  const event = guessEventFromInput(text);
 
   // Extract basic story (simplified)
-  const story = "This situation means that something important is being threatened or lost.";
+  const story = guessStoryFromInput(text);
 
   // Basic need identification
   const need = distressCount >= 2 ? "safety and support" : "clarity and understanding";
