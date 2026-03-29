@@ -245,6 +245,11 @@ async function generateAnalysis() {
 function displayAnalysis() {
   const { event, story, emotion, need, grounding, nextStep } = analysisResult;
   listenerPerspectiveBtn.disabled = false;
+  const safeStory = story || "what you just shared";
+  const bridgingCopy = story
+    ? `We separated what happened from what you are saying it means. Read the story out loud: "${safeStory}". How sure do you feel that this version matches what actually happened?`
+    : "We separated the facts from the meaning you gave them. Notice where the two feel different or the same.";
+  const confirmationText = `If the story feels right, tap "This Matches My Experience." If it feels off, tap "Something Feels Off" and we can adjust it together.`;
 
   eventStoryOutput.innerHTML = `
     <div class="analysis-block">
@@ -255,14 +260,12 @@ function displayAnalysis() {
       <h3>THE STORY (What you are currently making it mean):</h3>
       <p>${story}</p>
     </div>
-    <p class="bridging-statement">
-      The emotion you are feeling is almost certainly a response to the story — not the event. This is not a flaw. It is how human emotion works. The question worth sitting with is: how certain are you that the story is true?
-    </p>
-    <p class="confirmation-question">Does this reading match what you were actually experiencing — or does something feel off about it?</p>
-    <div class="listener-perspective">
-      <h3>LISTENER PERSPECTIVE</h3>
-      <p>How this may sound to someone listening: ${story}</p>
-    </div>
+    <p class="bridging-statement">${bridgingCopy}</p>
+    <p class="confirmation-question">${confirmationText}</p>
+      <div class="listener-perspective">
+        <h3>LISTENER PERSPECTIVE</h3>
+        <p>How this may sound to someone listening: ${safeStory}</p>
+      </div>
   `;
 }
 
@@ -291,21 +294,16 @@ function displayNeeds() {
   needsOutput.innerHTML = `
     <div class="needs-block">
       <h3>WHAT THIS MAY BE ASKING FOR:</h3>
-      <p>Beneath what you expressed, there may be a need for ${need}.</p>
-      <p>This is not a diagnosis. It is a direction to look.</p>
+      <p>It sounds like you might have been needing ${need} in that moment. Say it out loud and notice how it feels — is that what mattered most to you?</p>
       <p class="needs-question">
-        One question worth sitting with:
-        Is this a need you can meet for yourself right now —
-        or does it require something from someone else?
+        If it feels right, tap "This Feels Closer." If it still misses the mark, tap "Another Possibility" to explore other words or pick one from the list below.
       </p>
     </div>
   `;
 
   if (alternativeNeeds && alternativeNeeds.length > 0) {
-    alternativeNeedsMessage.textContent = `This could be pointing toward ${alternativeNeeds
-      .slice(0, 2)
-      .join(" or ")}. Which feels closer to true for you?`;
-    alternativeNeedSelect.innerHTML = '<option value="">Select an option...</option>';
+    alternativeNeedsMessage.textContent = `Pick the need that feels truer to what you actually wanted, then press "Continue With This."`;
+    alternativeNeedSelect.innerHTML = '<option value="">Choose the need that fits...</option>';
     alternativeNeeds.forEach(altNeed => {
       const option = document.createElement("option");
       option.value = altNeed;
@@ -313,8 +311,8 @@ function displayNeeds() {
       alternativeNeedSelect.appendChild(option);
     });
   } else {
-    alternativeNeedsMessage.textContent = "";
-    alternativeNeedSelect.innerHTML = '<option value="">Select an option...</option>';
+    alternativeNeedsMessage.textContent = "There are no extra suggestions right now. If you still want to adjust the feeling, tap \"Another Possibility\" and rewrite your words.";
+    alternativeNeedSelect.innerHTML = '<option value="">There are no extra options yet</option>';
   }
 }
 
