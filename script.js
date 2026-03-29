@@ -63,6 +63,7 @@ let bodySignal = "";
 let analysisResult = null;
 let identifiedNeed = "";
 let sessionHistory = [];
+let listenerPerspectiveText = "";
 
 // Speech recognition
 let recognition = null;
@@ -147,6 +148,7 @@ function startListening() {
   transcriptInput.value = "";
   accumulatedTranscript = "";
   listenerPerspectiveBtn.disabled = true;
+  listenerPerspectiveText = "";
   recognition.start();
 }
 
@@ -160,6 +162,7 @@ function clearCurrent() {
   hideAllSections();
   setStatus("Idle", false);
   updateListenerPerspectiveState();
+  listenerPerspectiveText = "";
 }
 
 function handleSpeechResult(event) {
@@ -249,6 +252,8 @@ function displayAnalysis() {
   const { event, story, emotion, need, grounding, nextStep } = analysisResult;
   listenerPerspectiveBtn.disabled = false;
   const safeStory = story || "what you just shared";
+  const listenerNote = createListenerPerspectiveSentence(analysisResult.listenerPerspective, safeStory);
+  listenerPerspectiveText = listenerNote || "";
   const bridgingCopy = story
     ? `We separated what happened from what you are saying it means. Read the story out loud: "${safeStory}". How sure do you feel that this version matches what actually happened?`
     : "We separated the facts from the meaning you gave them. Notice where the two feel different or the same.";
@@ -265,10 +270,10 @@ function displayAnalysis() {
     </div>
     <p class="bridging-statement">${bridgingCopy}</p>
     <p class="confirmation-question">${confirmationText}</p>
-      <div class="listener-perspective">
-        <h3>LISTENER PERSPECTIVE</h3>
-        <p>How this may sound to someone listening: ${safeStory}</p>
-      </div>
+    <div class="listener-perspective">
+      <h3>LISTENER PERSPECTIVE</h3>
+      <p>${listenerNote || `How this may sound to someone listening: ${safeStory}`}</p>
+    </div>
   `;
 }
 
@@ -365,14 +370,12 @@ function speakReflection() {
 }
 
 function playListenerPerspective() {
-  const storyText = analysisResult?.listenerPerspective?.trim() || analysisResult?.story?.trim();
-  const transcriptText = transcriptInput.value.trim();
-
-  if (storyText) {
-    speakText(`Listener perspective: ${storyText}`);
+  if (listenerPerspectiveText) {
+    speakText(listenerPerspectiveText);
     return;
   }
 
+  const transcriptText = transcriptInput.value.trim();
   if (transcriptText) {
     speakText(`Listener perspective guess: ${transcriptText}`);
     return;
@@ -383,6 +386,21 @@ function playListenerPerspective() {
 
 function updateListenerPerspectiveState() {
   listenerPerspectiveBtn.disabled = !transcriptInput.value.trim();
+}
+
+function createListenerPerspectiveSentence(preferred, fallbackStory) {
+  const raw = (preferred || fallbackStory || "").trim();
+  if (!raw) return "";
+
+  const unquoted = raw.replace(/^"+|"+$/g, "").replace(/\s+/g, " ");
+  const trimmed = unquoted.replace(/[.?!]*$/, "");
+  if (!trimmed) return "";
+
+  if (/^it may\b/i.test(trimmed) || /^it sounds\b/i.test(trimmed)) {
+    return `${trimmed}.`;
+  }
+
+  return `It may sound like ${trimmed}.`;
 }
 
 function saveReflection() {
