@@ -45,7 +45,7 @@ Use `.dev.vars` locally (see `.dev.vars.example`):
 - `GOOGLE_CLIENT_ID` - Your Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET` - Your Google OAuth client secret
 - `GEMINI_API_KEY` - Your Gemini AI API key
-- `GEMINI_MODEL` (optional, default: `gemini-2.0-flash`)
+- `GEMINI_MODEL` (optional, default: `gemini-2.5-flash`)
 - `PUBLIC_BASE_URL` - Your deployed app origin (e.g., `https://your-app.pages.dev`)
 
 ## Cloudflare Resources Required

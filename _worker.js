@@ -20,6 +20,9 @@ export default {
     if (url.pathname === "/api/infer" && request.method === "POST") {
       return handleInfer(request, env);
     }
+    if (url.pathname === "/api/ai/status" && request.method === "GET") {
+      return handleAiStatus(request, env);
+    }
 
     return env.ASSETS.fetch(request);
   }
@@ -268,45 +271,9 @@ async function handleLogout(request, env) {
   );
 }
 
-function fallbackInference(input, previous) {
-  const text = (input || "").toLowerCase();
-  const distressHints = ["anxious", "scared", "sad", "overwhelmed", "angry", "lost"];
-  const distressCount = distressHints.reduce((acc, w) => acc + (text.includes(w) ? 1 : 0), 0);
-  const emotionLabel =
-    distressCount >= 2 ? "Emotionally heavy / distressed" : "Mixed emotions / neutral";
-
-  const confidenceScore = Math.max(
-    20,
-    Math.min(90, 55 + (text.includes("i will") ? 20 : 0) - (text.includes("maybe") ? 15 : 0))
-  );
-  const pointScore = Math.max(20, Math.min(95, 85 - (text.split(/\s+/).length > 40 ? 20 : 0)));
-  const words = text
-    .split(/\W+/)
-    .filter((w) => w && w.length > 2)
-    .slice(0, 8);
-  const previousWords = (previous || "")
-    .toLowerCase()
-    .split(/\W+/)
-    .filter((w) => w && w.length > 2);
-  const newWords = words.filter((w) => !previousWords.includes(w)).slice(0, 5);
-
-  return {
-    emotionLabel,
-    confidenceScore,
-    pointScore,
-    wordChoiceNotes: `New repeated words: ${newWords.join(", ") || "none notable"}.`,
-    listenerPerspective:
-      "A listener may hear vulnerability and a need for clear support. Add one direct sentence with your exact need.",
-    acknowledgment:
-      "Thank you for sharing openly. You are focused, and these thoughts are temporary. Other areas of life can still remain stable and good.",
-    supportSuggestions:
-      "Take 5 deep breaths. Pause for 5 minutes before reacting. Ground yourself by naming 3 things you can see, 2 you can hear, and 1 you can feel."
-  };
-}
-
 async function callGemini(env, input, previousInput) {
   requireEnv(env, ["GEMINI_API_KEY"]);
-  const model = env.GEMINI_MODEL || "gemini-2.0-flash";
+  const model = env.GEMINI_MODEL || "gemini-2.5-flash";
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
 
   const prompt = [
@@ -338,7 +305,8 @@ async function callGemini(env, input, previousInput) {
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.3
+        temperature: 0.3,
+        responseMimeType: "application/json"
       }
     })
   });
@@ -349,11 +317,14 @@ async function callGemini(env, input, previousInput) {
 
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  if (!text.trim()) {
+    throw new Error("Gemini returned an empty response.");
+  }
   const cleaned = text.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
   const parsed = JSON.parse(cleaned);
 
-  return {
-    emotionLabel: String(parsed.emotionLabel || "Mixed emotions / neutral"),
+  const result = {
+    emotionLabel: String(parsed.emotionLabel || ""),
     confidenceScore: normalizeScore(parsed.confidenceScore),
     pointScore: normalizeScore(parsed.pointScore),
     wordChoiceNotes: String(parsed.wordChoiceNotes || ""),
@@ -361,6 +332,86 @@ async function callGemini(env, input, previousInput) {
     acknowledgment: String(parsed.acknowledgment || ""),
     supportSuggestions: String(parsed.supportSuggestions || "")
   };
+
+  if (
+    !result.emotionLabel
+    || !result.acknowledgment
+    || !result.supportSuggestions
+    || !result.listenerPerspective
+    || !result.wordChoiceNotes
+  ) {
+    throw new Error("Gemini response did not include required fields.");
+  }
+
+  return result;
+}
+
+async function handleAiStatus(request, env) {
+  const session = await requireSession(request, env);
+  if (!session) return json({ error: "Unauthorized" }, 401);
+
+  const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+  if (!env.GEMINI_API_KEY) {
+    return json(
+      {
+        ok: false,
+        configured: false,
+        model,
+        geminiReachable: false,
+        error: "Missing GEMINI_API_KEY environment variable."
+      },
+      500
+    );
+  }
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: 'Return {"ok":true} as JSON only.' }] }],
+        generationConfig: {
+          temperature: 0,
+          responseMimeType: "application/json"
+        }
+      })
+    });
+
+    if (!res.ok) {
+      const details = (await res.text()).slice(0, 400);
+      return json(
+        {
+          ok: false,
+          configured: true,
+          model,
+          geminiReachable: false,
+          status: res.status,
+          error: `Gemini health check failed: ${details || "Unknown error"}`
+        },
+        502
+      );
+    }
+
+    return json({
+      ok: true,
+      configured: true,
+      model,
+      geminiReachable: true
+    });
+  } catch (err) {
+    return json(
+      {
+        ok: false,
+        configured: true,
+        model,
+        geminiReachable: false,
+        error: `Gemini health check exception: ${err.message}`
+      },
+      502
+    );
+  }
 }
 
 function normalizeScore(value) {
@@ -388,11 +439,6 @@ async function handleInfer(request, env) {
     const result = await callGemini(env, input, previousInput);
     return json({ ok: true, result });
   } catch (err) {
-    const fallback = fallbackInference(input, previousInput);
-    return json({
-      ok: true,
-      result: fallback,
-      warning: `Gemini unavailable, fallback used: ${err.message}`
-    });
+    return json({ error: `LLM inference failed: ${err.message}` }, 502);
   }
 }

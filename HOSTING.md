@@ -79,7 +79,7 @@ In your Pages project settings, go to "Environment variables" and add:
 GOOGLE_CLIENT_ID=your_google_client_id_here
 GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-2.5-flash
 PUBLIC_BASE_URL=https://your-project-name.pages.dev
 ```
 
@@ -88,7 +88,7 @@ PUBLIC_BASE_URL=https://your-project-name.pages.dev
 GOOGLE_CLIENT_ID=your_google_client_id_here
 GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-2.5-flash
 PUBLIC_BASE_URL=https://your-project-name.pages.dev
 ```
 
@@ -145,7 +145,7 @@ Edit `.dev.vars` with your actual values:
 GOOGLE_CLIENT_ID=your_google_client_id_here
 GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-2.5-flash
 PUBLIC_BASE_URL=http://localhost:8787
 ```
 

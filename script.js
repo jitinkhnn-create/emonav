@@ -288,12 +288,47 @@ async function checkAuth() {
     const data = await res.json();
     if (data?.authenticated && data?.user) {
       setAuthenticatedUI(data.user);
+      await checkAiSetup();
     } else {
       setAuthenticatedUI(null);
     }
   } catch {
     setAuthenticatedUI(null);
   }
+}
+
+async function getApiErrorMessage(res, fallbackPrefix) {
+  let payload;
+  try {
+    payload = await res.json();
+  } catch {
+    const txt = await res.text();
+    return txt ? `${fallbackPrefix}: ${txt}` : `${fallbackPrefix} (HTTP ${res.status})`;
+  }
+
+  const msg = payload?.error || payload?.warning || payload?.message;
+  return msg ? `${fallbackPrefix}: ${msg}` : `${fallbackPrefix} (HTTP ${res.status})`;
+}
+
+async function checkAiSetup() {
+  const res = await fetch("/api/ai/status", {
+    method: "GET",
+    credentials: "same-origin"
+  });
+
+  if (res.status === 401) {
+    return;
+  }
+
+  if (!res.ok) {
+    const msg = await getApiErrorMessage(res, "AI setup check failed");
+    setStatus(msg);
+    return;
+  }
+
+  const data = await res.json();
+  const model = data?.model || "unknown-model";
+  setStatus(`AI setup OK. Gemini model: ${model}`);
 }
 
 async function inferWithGemini(input, previousInput) {
@@ -310,12 +345,22 @@ async function inferWithGemini(input, previousInput) {
   }
 
   if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Inference failed: ${txt}`);
+    const msg = await getApiErrorMessage(res, "Inference failed");
+    throw new Error(msg);
   }
 
   const data = await res.json();
-  return data.result;
+  const result = data?.result;
+  if (
+    !result
+    || !result.acknowledgment
+    || !result.supportSuggestions
+    || !result.listenerPerspective
+    || !result.emotionLabel
+  ) {
+    throw new Error("Inference failed: LLM response missing required fields.");
+  }
+  return result;
 }
 
 function initSpeechRecognition() {
@@ -421,7 +466,7 @@ confirmMeaningBtn.addEventListener("click", async () => {
 
     const current = {
       transcript,
-      emotionLabel: ai.emotionLabel || localEmotionLabel(transcript),
+      emotionLabel: ai.emotionLabel,
       confidenceScore: normalizeScore(ai.confidenceScore),
       pointScore: normalizeScore(ai.pointScore),
       wordChoiceNotes: ai.wordChoiceNotes || "",
@@ -429,12 +474,12 @@ confirmMeaningBtn.addEventListener("click", async () => {
       createdAt: new Date().toISOString()
     };
 
-    finalReplyText = ai.acknowledgment || "Thank you for sharing openly.";
-    finalSupportText = ai.supportSuggestions || "Take 5 deep breaths and pause for 5 minutes.";
+    finalReplyText = ai.acknowledgment;
+    finalSupportText = ai.supportSuggestions;
 
     replyOutput.textContent = finalReplyText;
     supportOutput.textContent = finalSupportText;
-    listenerPerspectiveOutput.textContent = ai.listenerPerspective || createLocalListenerPerspective(transcript);
+    listenerPerspectiveOutput.textContent = ai.listenerPerspective;
 
     speakReplyBtn.disabled = false;
     speakSupportBtn.disabled = false;
