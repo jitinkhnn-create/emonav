@@ -328,7 +328,8 @@ async function checkAiSetup() {
 
   const data = await res.json();
   const model = data?.model || "unknown-model";
-  setStatus(`AI setup OK. Gemini model: ${model}`);
+  const provider = data?.activeProvider || data?.provider || "unknown-provider";
+  setStatus(`AI setup OK. Provider: ${provider}. Model: ${model}`);
 }
 
 async function inferWithGemini(input, previousInput) {

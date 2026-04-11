@@ -1,5 +1,7 @@
 GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
+LLM_PROVIDER="auto"
+CF_AI_MODEL="@cf/google/gemma-4-26b-a4b-it"
 GEMINI_API_KEY="your-gemini-ai-studio-api-key"
 GEMINI_MODEL="gemini-2.5-flash"
 PUBLIC_BASE_URL="https://your-domain.pages.dev"

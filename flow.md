@@ -4,9 +4,9 @@
 1. User opens app.
 2. Frontend calls `GET /api/auth/me`.
 3. If authenticated, frontend calls `GET /api/ai/status`.
-4. Worker validates session and checks Gemini connectivity/model.
+4. Worker validates session and checks active LLM provider connectivity/model.
 5. UI shows either:
-   - `AI setup OK. Gemini model: <model>`
+   - `AI setup OK. Provider: <provider>. Model: <model>`
    - or a clear setup failure message.
 
 ## 2) Voice capture
@@ -22,15 +22,15 @@
 3. Frontend calls `POST /api/infer` with:
    - `input` = current transcript
    - `previousInput` = last saved transcript (if any)
-4. Worker calls Gemini and returns strict JSON.
-5. Frontend reads `listenerPerspective` from Gemini result, displays it, and speaks it.
+4. Worker calls LLM provider (`cloudflare` or `gemini`) and returns strict JSON.
+5. Frontend reads `listenerPerspective` from model result, displays it, and speaks it.
 6. If API fails, frontend shows explicit error status.
 
 ## 4) This is what I mean (confirm)
 1. User clicks `This is what I mean`.
 2. Frontend validates transcript + sign-in.
 3. Frontend calls `POST /api/infer` (same endpoint).
-4. Worker calls Gemini and returns:
+4. Worker calls configured provider and returns:
    - `emotionLabel`
    - `confidenceScore`
    - `pointScore`

@@ -1,5 +1,7 @@
 const COOKIE_SESSION = "emonav_session";
 const COOKIE_OAUTH_STATE = "emonav_oauth_state";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_CF_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 
 export default {
   async fetch(request, env, ctx) {
@@ -271,12 +273,14 @@ async function handleLogout(request, env) {
   );
 }
 
-async function callGemini(env, input, previousInput) {
-  requireEnv(env, ["GEMINI_API_KEY"]);
-  const model = env.GEMINI_MODEL || "gemini-2.5-flash";
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
+function getInferenceProvider(env) {
+  const raw = String(env.LLM_PROVIDER || "auto").toLowerCase().trim();
+  if (raw === "cloudflare" || raw === "gemini" || raw === "auto") return raw;
+  return "auto";
+}
 
-  const prompt = [
+function buildInferencePrompt(input, previousInput) {
+  return [
     "You are an emotional reflection assistant. Return strict JSON only.",
     "Analyze current user input and optionally compare with previous input.",
     "JSON schema:",
@@ -298,31 +302,15 @@ async function callGemini(env, input, previousInput) {
     `Previous input: """${previousInput || ""}"""`,
     "Return only JSON."
   ].join("\n");
+}
 
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3,
-        responseMimeType: "application/json"
-      }
-    })
-  });
+function parseJsonFromText(text) {
+  const cleaned = String(text || "").replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+  if (!cleaned) throw new Error("Model returned an empty response.");
+  return JSON.parse(cleaned);
+}
 
-  if (!res.ok) {
-    throw new Error(`Gemini call failed: ${res.status}`);
-  }
-
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  if (!text.trim()) {
-    throw new Error("Gemini returned an empty response.");
-  }
-  const cleaned = text.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
-  const parsed = JSON.parse(cleaned);
-
+function normalizeInferenceResult(parsed, providerLabel) {
   const result = {
     emotionLabel: String(parsed.emotionLabel || ""),
     confidenceScore: normalizeScore(parsed.confidenceScore),
@@ -340,32 +328,112 @@ async function callGemini(env, input, previousInput) {
     || !result.listenerPerspective
     || !result.wordChoiceNotes
   ) {
-    throw new Error("Gemini response did not include required fields.");
+    throw new Error(`${providerLabel} response did not include required fields.`);
   }
 
   return result;
 }
 
-async function handleAiStatus(request, env) {
-  const session = await requireSession(request, env);
-  if (!session) return json({ error: "Unauthorized" }, 401);
+function extractTextFromCloudflareAi(raw) {
+  if (typeof raw === "string") return raw;
+  if (!raw || typeof raw !== "object") return "";
+  if (typeof raw.response === "string") return raw.response;
+  if (typeof raw.result?.response === "string") return raw.result.response;
+  if (typeof raw.output_text === "string") return raw.output_text;
+  if (Array.isArray(raw.choices) && typeof raw.choices[0]?.message?.content === "string") {
+    return raw.choices[0].message.content;
+  }
+  if (Array.isArray(raw.output) && typeof raw.output[0]?.content?.[0]?.text === "string") {
+    return raw.output[0].content[0].text;
+  }
+  return "";
+}
 
-  const model = env.GEMINI_MODEL || "gemini-2.5-flash";
+async function callGemini(env, input, previousInput) {
+  requireEnv(env, ["GEMINI_API_KEY"]);
+  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
+  const prompt = buildInferencePrompt(input, previousInput);
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        responseMimeType: "application/json"
+      }
+    })
+  });
+
+  if (!res.ok) {
+    const details = (await res.text()).slice(0, 400);
+    throw new Error(`Gemini call failed: ${res.status}${details ? `: ${details}` : ""}`);
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const parsed = parseJsonFromText(text);
+  return normalizeInferenceResult(parsed, "Gemini");
+}
+
+async function callCloudflareAi(env, input, previousInput) {
+  if (!env.AI || typeof env.AI.run !== "function") {
+    throw new Error("Cloudflare AI binding missing. Add binding name AI.");
+  }
+
+  const model = env.CF_AI_MODEL || DEFAULT_CF_MODEL;
+  const prompt = buildInferencePrompt(input, previousInput);
+  const response = await env.AI.run(model, {
+    messages: [
+      { role: "system", content: "Return strict JSON only." },
+      { role: "user", content: prompt }
+    ],
+    temperature: 0.3
+  });
+  const text = extractTextFromCloudflareAi(response);
+  const parsed = parseJsonFromText(text);
+  return normalizeInferenceResult(parsed, "Cloudflare AI");
+}
+
+async function inferWithProvider(env, input, previousInput) {
+  const provider = getInferenceProvider(env);
+  const errors = [];
+
+  if (provider === "cloudflare") {
+    return callCloudflareAi(env, input, previousInput);
+  }
+  if (provider === "gemini") {
+    return callGemini(env, input, previousInput);
+  }
+
+  try {
+    return await callCloudflareAi(env, input, previousInput);
+  } catch (err) {
+    errors.push(`cloudflare=${err.message}`);
+  }
+  try {
+    return await callGemini(env, input, previousInput);
+  } catch (err) {
+    errors.push(`gemini=${err.message}`);
+  }
+  throw new Error(`All inference providers failed: ${errors.join(" | ")}`);
+}
+
+async function checkGeminiStatus(env) {
+  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   if (!env.GEMINI_API_KEY) {
-    return json(
-      {
-        ok: false,
-        configured: false,
-        model,
-        geminiReachable: false,
-        error: "Missing GEMINI_API_KEY environment variable."
-      },
-      500
-    );
+    return {
+      ok: false,
+      provider: "gemini",
+      configured: false,
+      model,
+      error: "Missing GEMINI_API_KEY environment variable."
+    };
   }
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
-
   try {
     const res = await fetch(endpoint, {
       method: "POST",
@@ -378,40 +446,91 @@ async function handleAiStatus(request, env) {
         }
       })
     });
-
     if (!res.ok) {
       const details = (await res.text()).slice(0, 400);
-      return json(
-        {
-          ok: false,
-          configured: true,
-          model,
-          geminiReachable: false,
-          status: res.status,
-          error: `Gemini health check failed: ${details || "Unknown error"}`
-        },
-        502
-      );
-    }
-
-    return json({
-      ok: true,
-      configured: true,
-      model,
-      geminiReachable: true
-    });
-  } catch (err) {
-    return json(
-      {
+      return {
         ok: false,
+        provider: "gemini",
         configured: true,
         model,
-        geminiReachable: false,
-        error: `Gemini health check exception: ${err.message}`
-      },
-      502
-    );
+        status: res.status,
+        error: `Gemini health check failed: ${details || "Unknown error"}`
+      };
+    }
+    return { ok: true, provider: "gemini", configured: true, model };
+  } catch (err) {
+    return {
+      ok: false,
+      provider: "gemini",
+      configured: true,
+      model,
+      error: `Gemini health check exception: ${err.message}`
+    };
   }
+}
+
+async function checkCloudflareAiStatus(env) {
+  const model = env.CF_AI_MODEL || DEFAULT_CF_MODEL;
+  if (!env.AI || typeof env.AI.run !== "function") {
+    return {
+      ok: false,
+      provider: "cloudflare",
+      configured: false,
+      model,
+      error: "Cloudflare AI binding missing. Add binding name AI."
+    };
+  }
+
+  try {
+    await env.AI.run(model, {
+      messages: [{ role: "user", content: "Reply with OK" }],
+      max_tokens: 8,
+      temperature: 0
+    });
+    return { ok: true, provider: "cloudflare", configured: true, model };
+  } catch (err) {
+    return {
+      ok: false,
+      provider: "cloudflare",
+      configured: true,
+      model,
+      error: `Cloudflare AI health check failed: ${err.message}`
+    };
+  }
+}
+
+async function handleAiStatus(request, env) {
+  const session = await requireSession(request, env);
+  if (!session) return json({ error: "Unauthorized" }, 401);
+
+  const provider = getInferenceProvider(env);
+
+  if (provider === "cloudflare") {
+    const status = await checkCloudflareAiStatus(env);
+    return json(status, status.ok ? 200 : 502);
+  }
+  if (provider === "gemini") {
+    const status = await checkGeminiStatus(env);
+    return json(status, status.ok ? 200 : 502);
+  }
+
+  const cfStatus = await checkCloudflareAiStatus(env);
+  if (cfStatus.ok) {
+    return json({ ...cfStatus, provider: "auto", activeProvider: "cloudflare" });
+  }
+  const geminiStatus = await checkGeminiStatus(env);
+  if (geminiStatus.ok) {
+    return json({ ...geminiStatus, provider: "auto", activeProvider: "gemini" });
+  }
+  return json(
+    {
+      ok: false,
+      provider: "auto",
+      activeProvider: null,
+      error: `No provider healthy. cloudflare=${cfStatus.error}; gemini=${geminiStatus.error}`
+    },
+    502
+  );
 }
 
 function normalizeScore(value) {
@@ -436,7 +555,7 @@ async function handleInfer(request, env) {
   if (!input) return json({ error: "input is required" }, 400);
 
   try {
-    const result = await callGemini(env, input, previousInput);
+    const result = await inferWithProvider(env, input, previousInput);
     return json({ ok: true, result });
   } catch (err) {
     return json({ error: `LLM inference failed: ${err.message}` }, 502);
