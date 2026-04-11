@@ -279,6 +279,29 @@ function getInferenceProvider(env) {
   return "auto";
 }
 
+function sanitizeProvider(value) {
+  const raw = String(value || "").toLowerCase().trim();
+  if (raw === "cloudflare" || raw === "gemini" || raw === "auto") return raw;
+  return "";
+}
+
+function resolveInferenceConfig(env, providerOverride, modelOverride) {
+  const provider = sanitizeProvider(providerOverride) || getInferenceProvider(env);
+  const normalizedModel = String(modelOverride || "").trim();
+  const cloudflareModel = provider === "cloudflare" || provider === "auto"
+    ? (normalizedModel || env.CF_AI_MODEL || DEFAULT_CF_MODEL)
+    : (env.CF_AI_MODEL || DEFAULT_CF_MODEL);
+  const geminiModel = provider === "gemini"
+    ? (normalizedModel || env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL)
+    : (env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL);
+
+  return {
+    provider,
+    cloudflareModel,
+    geminiModel
+  };
+}
+
 function buildInferencePrompt(input, previousInput) {
   return [
     "You are an emotional reflection assistant. Return strict JSON only.",
@@ -349,10 +372,10 @@ function extractTextFromCloudflareAi(raw) {
   return "";
 }
 
-async function callGemini(env, input, previousInput) {
+async function callGemini(env, input, previousInput, model) {
   requireEnv(env, ["GEMINI_API_KEY"]);
-  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
+  const selectedModel = model || env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
   const prompt = buildInferencePrompt(input, previousInput);
 
   const res = await fetch(endpoint, {
@@ -378,14 +401,14 @@ async function callGemini(env, input, previousInput) {
   return normalizeInferenceResult(parsed, "Gemini");
 }
 
-async function callCloudflareAi(env, input, previousInput) {
+async function callCloudflareAi(env, input, previousInput, model) {
   if (!env.AI || typeof env.AI.run !== "function") {
     throw new Error("Cloudflare AI binding missing. Add binding name AI.");
   }
 
-  const model = env.CF_AI_MODEL || DEFAULT_CF_MODEL;
+  const selectedModel = model || env.CF_AI_MODEL || DEFAULT_CF_MODEL;
   const prompt = buildInferencePrompt(input, previousInput);
-  const response = await env.AI.run(model, {
+  const response = await env.AI.run(selectedModel, {
     messages: [
       { role: "system", content: "Return strict JSON only." },
       { role: "user", content: prompt }
@@ -397,32 +420,33 @@ async function callCloudflareAi(env, input, previousInput) {
   return normalizeInferenceResult(parsed, "Cloudflare AI");
 }
 
-async function inferWithProvider(env, input, previousInput) {
-  const provider = getInferenceProvider(env);
+async function inferWithProvider(env, input, previousInput, providerOverride, modelOverride) {
+  const config = resolveInferenceConfig(env, providerOverride, modelOverride);
+  const provider = config.provider;
   const errors = [];
 
   if (provider === "cloudflare") {
-    return callCloudflareAi(env, input, previousInput);
+    return callCloudflareAi(env, input, previousInput, config.cloudflareModel);
   }
   if (provider === "gemini") {
-    return callGemini(env, input, previousInput);
+    return callGemini(env, input, previousInput, config.geminiModel);
   }
 
   try {
-    return await callCloudflareAi(env, input, previousInput);
+    return await callCloudflareAi(env, input, previousInput, config.cloudflareModel);
   } catch (err) {
     errors.push(`cloudflare=${err.message}`);
   }
   try {
-    return await callGemini(env, input, previousInput);
+    return await callGemini(env, input, previousInput, config.geminiModel);
   } catch (err) {
     errors.push(`gemini=${err.message}`);
   }
   throw new Error(`All inference providers failed: ${errors.join(" | ")}`);
 }
 
-async function checkGeminiStatus(env) {
-  const model = env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+async function checkGeminiStatus(env, modelOverride) {
+  const model = String(modelOverride || "").trim() || env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   if (!env.GEMINI_API_KEY) {
     return {
       ok: false,
@@ -469,8 +493,8 @@ async function checkGeminiStatus(env) {
   }
 }
 
-async function checkCloudflareAiStatus(env) {
-  const model = env.CF_AI_MODEL || DEFAULT_CF_MODEL;
+async function checkCloudflareAiStatus(env, modelOverride) {
+  const model = String(modelOverride || "").trim() || env.CF_AI_MODEL || DEFAULT_CF_MODEL;
   if (!env.AI || typeof env.AI.run !== "function") {
     return {
       ok: false,
@@ -502,23 +526,26 @@ async function checkCloudflareAiStatus(env) {
 async function handleAiStatus(request, env) {
   const session = await requireSession(request, env);
   if (!session) return json({ error: "Unauthorized" }, 401);
-
-  const provider = getInferenceProvider(env);
+  const url = new URL(request.url);
+  const providerOverride = url.searchParams.get("provider") || "";
+  const modelOverride = url.searchParams.get("model") || "";
+  const config = resolveInferenceConfig(env, providerOverride, modelOverride);
+  const provider = config.provider;
 
   if (provider === "cloudflare") {
-    const status = await checkCloudflareAiStatus(env);
+    const status = await checkCloudflareAiStatus(env, config.cloudflareModel);
     return json(status, status.ok ? 200 : 502);
   }
   if (provider === "gemini") {
-    const status = await checkGeminiStatus(env);
+    const status = await checkGeminiStatus(env, config.geminiModel);
     return json(status, status.ok ? 200 : 502);
   }
 
-  const cfStatus = await checkCloudflareAiStatus(env);
+  const cfStatus = await checkCloudflareAiStatus(env, config.cloudflareModel);
   if (cfStatus.ok) {
     return json({ ...cfStatus, provider: "auto", activeProvider: "cloudflare" });
   }
-  const geminiStatus = await checkGeminiStatus(env);
+  const geminiStatus = await checkGeminiStatus(env, config.geminiModel);
   if (geminiStatus.ok) {
     return json({ ...geminiStatus, provider: "auto", activeProvider: "gemini" });
   }
@@ -552,10 +579,12 @@ async function handleInfer(request, env) {
 
   const input = String(body?.input || "").trim();
   const previousInput = String(body?.previousInput || "").trim();
+  const providerOverride = String(body?.provider || "").trim();
+  const modelOverride = String(body?.model || "").trim();
   if (!input) return json({ error: "input is required" }, 400);
 
   try {
-    const result = await inferWithProvider(env, input, previousInput);
+    const result = await inferWithProvider(env, input, previousInput, providerOverride, modelOverride);
     return json({ ok: true, result });
   } catch (err) {
     return json({ error: `LLM inference failed: ${err.message}` }, 502);

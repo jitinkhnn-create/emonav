@@ -32,6 +32,21 @@
           </div>
         </div>
         <p id="authUser" class="auth-user"></p>
+        <div class="actions">
+          <label for="llmProviderSelect">LLM Provider</label>
+          <select id="llmProviderSelect">
+            <option value="auto">auto</option>
+            <option value="cloudflare">cloudflare</option>
+            <option value="gemini">gemini</option>
+          </select>
+          <label for="llmModelInput">Model Override (optional)</label>
+          <input
+            id="llmModelInput"
+            type="text"
+            placeholder="@cf/google/gemma-4-26b-a4b-it or gemini-2.5-flash"
+          />
+          <button id="applyLlmSettingsBtn" type="button">Apply LLM Settings</button>
+        </div>
       </section>
 
       <section class="card">

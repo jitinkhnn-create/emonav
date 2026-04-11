@@ -8,6 +8,10 @@
 5. UI shows either:
    - `AI setup OK. Provider: <provider>. Model: <model>`
    - or a clear setup failure message.
+6. User can optionally override provider/model in the Account card:
+   - provider: `auto`, `cloudflare`, or `gemini`
+   - optional model override text field
+   - these overrides are stored in browser localStorage and sent per request.
 
 ## 2) Voice capture
 1. User clicks `Start listening`.

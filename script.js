@@ -21,6 +21,9 @@ const growthThreadOutput = document.getElementById("growthThreadOutput");
 const googleLoginBtn = document.getElementById("googleLoginBtn");
 const authStatus = document.getElementById("authStatus");
 const authUser = document.getElementById("authUser");
+const llmProviderSelect = document.getElementById("llmProviderSelect");
+const llmModelInput = document.getElementById("llmModelInput");
+const applyLlmSettingsBtn = document.getElementById("applyLlmSettingsBtn");
 
 const transcriptInput = document.getElementById("transcriptInput");
 const statusEl = document.getElementById("status");
@@ -36,6 +39,7 @@ const comparisonOutputEl = document.getElementById("comparisonOutput");
 const historyListEl = document.getElementById("historyList");
 
 const STORAGE_KEY = "emonav_voice_reflections_v1";
+const LLM_SETTINGS_KEY = "emonav_llm_settings_v1";
 
 const positiveWords = ["calm", "hopeful", "better", "strong", "grateful", "okay", "fine", "confident", "focused", "good", "happy"];
 const challengingWords = ["anxious", "afraid", "fear", "scared", "stressed", "overwhelmed", "sad", "angry", "alone", "lost", "worthless"];
@@ -46,6 +50,30 @@ let finalSupportText = "";
 let currentUser = null;
 let reflectionQuestionsText = "";
 let growthInsights = "";
+
+function loadLlmSettings() {
+  try {
+    const raw = localStorage.getItem(LLM_SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      provider: ["auto", "cloudflare", "gemini"].includes(parsed.provider) ? parsed.provider : "auto",
+      model: typeof parsed.model === "string" ? parsed.model : ""
+    };
+  } catch {
+    return { provider: "auto", model: "" };
+  }
+}
+
+function saveLlmSettings(settings) {
+  localStorage.setItem(LLM_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function getLlmOverrides() {
+  return {
+    provider: llmProviderSelect?.value || "auto",
+    model: (llmModelInput?.value || "").trim()
+  };
+}
 
 function loadHistory() {
   try {
@@ -311,7 +339,11 @@ async function getApiErrorMessage(res, fallbackPrefix) {
 }
 
 async function checkAiSetup() {
-  const res = await fetch("/api/ai/status", {
+  const overrides = getLlmOverrides();
+  const params = new URLSearchParams();
+  if (overrides.provider) params.set("provider", overrides.provider);
+  if (overrides.model) params.set("model", overrides.model);
+  const res = await fetch(`/api/ai/status?${params.toString()}`, {
     method: "GET",
     credentials: "same-origin"
   });
@@ -333,11 +365,17 @@ async function checkAiSetup() {
 }
 
 async function inferWithGemini(input, previousInput) {
+  const overrides = getLlmOverrides();
   const res = await fetch("/api/infer", {
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ input, previousInput })
+    body: JSON.stringify({
+      input,
+      previousInput,
+      provider: overrides.provider,
+      model: overrides.model
+    })
   });
 
   if (res.status === 401) {
@@ -448,12 +486,12 @@ listenerPerspectiveBtn.addEventListener("click", async () => {
   const previous = history.length ? history[history.length - 1] : null;
 
   try {
-    setStatus("Analyzing listener perspective with Gemini...");
+    setStatus("Analyzing listener perspective with selected LLM...");
     const ai = await inferWithGemini(text, previous?.transcript || "");
     const perspectiveText = ai.listenerPerspective;
     listenerPerspectiveOutput.textContent = perspectiveText;
     speakText(perspectiveText);
-    setStatus("Playing Gemini listener-perspective interpretation.");
+    setStatus("Playing listener-perspective interpretation.");
   } catch (err) {
     setStatus(err.message || "Listener-perspective analysis failed.");
   }
@@ -470,7 +508,7 @@ confirmMeaningBtn.addEventListener("click", async () => {
     return;
   }
 
-  setStatus("Analyzing input with Gemini...");
+  setStatus("Analyzing input with selected LLM...");
 
   const history = loadHistory();
   const previous = history.length ? history[history.length - 1] : null;
@@ -589,4 +627,18 @@ logoutBtn.addEventListener("click", async () => {
 
 initSpeechRecognition();
 renderHistory();
+
+const initialLlmSettings = loadLlmSettings();
+if (llmProviderSelect) llmProviderSelect.value = initialLlmSettings.provider;
+if (llmModelInput) llmModelInput.value = initialLlmSettings.model;
+
+applyLlmSettingsBtn.addEventListener("click", async () => {
+  const settings = getLlmOverrides();
+  saveLlmSettings(settings);
+  setStatus(`Saved LLM settings. Provider: ${settings.provider}${settings.model ? `, Model: ${settings.model}` : ""}`);
+  if (currentUser) {
+    await checkAiSetup();
+  }
+});
+
 checkAuth();
