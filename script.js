@@ -432,17 +432,30 @@ playbackBtn.addEventListener("click", () => {
   setStatus("Playing your input back for confirmation.");
 });
 
-listenerPerspectiveBtn.addEventListener("click", () => {
+listenerPerspectiveBtn.addEventListener("click", async () => {
   const text = transcriptInput.value.trim();
   if (!text) {
     setStatus("Please provide voice/text input first.");
     return;
   }
+  if (!currentUser) {
+    setStatus("Sign in with Google first.");
+    return;
+  }
 
-  const perspectiveText = createLocalListenerPerspective(text);
-  listenerPerspectiveOutput.textContent = perspectiveText;
-  speakText(perspectiveText);
-  setStatus("Playing listener-perspective interpretation.");
+  const history = loadHistory();
+  const previous = history.length ? history[history.length - 1] : null;
+
+  try {
+    setStatus("Analyzing listener perspective with Gemini...");
+    const ai = await inferWithGemini(text, previous?.transcript || "");
+    const perspectiveText = ai.listenerPerspective;
+    listenerPerspectiveOutput.textContent = perspectiveText;
+    speakText(perspectiveText);
+    setStatus("Playing Gemini listener-perspective interpretation.");
+  } catch (err) {
+    setStatus(err.message || "Listener-perspective analysis failed.");
+  }
 });
 
 confirmMeaningBtn.addEventListener("click", async () => {
