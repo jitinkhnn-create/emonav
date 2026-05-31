@@ -1,7 +1,12 @@
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
+interface ContentBlock {
+  type: string;
+  text?: string;
+}
+
 interface AnthropicResponse {
-  completion?: string;
+  content?: ContentBlock[];
   error?: { message: string };
 }
 
@@ -20,20 +25,25 @@ export async function getAIResponse(systemPrompt: string, userMessage: string): 
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage }
-        ]
+        max_tokens: 150,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }]
       })
     });
 
     const data = (await response.json()) as AnthropicResponse;
-    if (!response.ok || !data.completion) {
+    if (!response.ok) {
       console.error('AI error:', data);
       return "I'm here. Take your time.";
     }
 
-    return data.completion.trim();
+    const text = data.content
+      ?.filter((block: ContentBlock) => block.type === 'text')
+      .map((block: ContentBlock) => block.text)
+      .join('')
+      .trim();
+
+    return text || "I'm here. Take your time.";
   } catch (error) {
     console.error('AI response error:', error);
     return "I'm here. Take your time.";

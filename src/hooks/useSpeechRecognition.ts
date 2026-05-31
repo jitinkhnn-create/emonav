@@ -13,9 +13,43 @@ export interface SpeechRecognitionOptions {
   onEnd?: () => void;
 }
 
+interface SpeechRecognitionInstance extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: (event: SpeechRecognitionResultEvent) => void;
+  onerror: (event: Event) => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+interface SpeechRecognitionResultEvent extends Event {
+  results: SpeechRecognitionResultList;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+  length: number;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
 export default function useSpeechRecognition(options: SpeechRecognitionOptions) {
   const { language, onResult, onError, onEnd } = options;
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | undefined>(undefined);
@@ -27,20 +61,21 @@ export default function useSpeechRecognition(options: SpeechRecognitionOptions) 
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SpeechRecognition() as SpeechRecognitionInstance;
     recognition.lang = language;
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0]?.transcript?.trim() || '';
+    recognition.onresult = (event: SpeechRecognitionResultEvent) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim() || '';
       setTranscript(transcript);
       onResult?.(transcript);
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      const message = event.error || 'Speech recognition error.';
+    recognition.onerror = (event: Event) => {
+      const errorEvent = event as any;
+      const message = errorEvent.error || 'Speech recognition error.';
       setError(message);
       onError?.(message);
       setIsListening(false);

@@ -102,7 +102,8 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
       throat: ['choked', 'silenced', 'holding back'],
       chest: ['heavy', 'tight', 'aching'],
       stomach: ['anxious', 'sick', 'knotted'],
-      hands: ['restless', 'clenching', 'wanting to act']
+      hands: ['restless', 'clenching', 'wanting to act'],
+      legs: ['shaky', 'weak', 'unsteady']
     };
     return mapping[bodyLocation];
   }, [bodyLocation]);
