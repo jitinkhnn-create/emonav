@@ -13,6 +13,40 @@ export interface SpeechRecognitionOptions {
   onEnd?: () => void;
 }
 
+interface SpeechRecognitionInstance extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: (event: SpeechRecognitionResultEvent) => void;
+  onerror: (event: Event) => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+interface SpeechRecognitionResultEvent extends Event {
+  results: SpeechRecognitionResultList;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+}
+
+interface SpeechRecognitionResult {
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+  length: number;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
 export default function useSpeechRecognition(options: SpeechRecognitionOptions) {
   const { language, onResult, onError, onEnd } = options;
   const recognitionRef = useRef<any>(null);
@@ -27,7 +61,7 @@ export default function useSpeechRecognition(options: SpeechRecognitionOptions) 
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SpeechRecognition() as SpeechRecognitionInstance;
     recognition.lang = language;
     recognition.continuous = false;
     recognition.interimResults = false;

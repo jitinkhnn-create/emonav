@@ -64,6 +64,34 @@
   }
 }
 
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    r: 60px;
+    opacity: 1;
+  }
+  100% {
+    r: 100px;
+    opacity: 0;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.delay-150 {
+  animation-delay: 150ms;
+}
+
 .fade-enter {
   opacity: 0;
 }

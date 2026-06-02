@@ -66,8 +66,8 @@ id = "your_actual_kv_namespace_id_here"
 3. Select your GitHub repository (`jitinkhnn-create/emonav`)
 4. Configure build settings:
    - **Framework preset**: `None`
-   - **Build command**: Leave empty
-   - **Build output directory**: `.`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
    - **Root directory**: Leave empty
 
 ### 3.2 Set Environment Variables
