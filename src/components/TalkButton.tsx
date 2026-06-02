@@ -1,17 +1,25 @@
 interface Props {
   onClick: () => void;
+  disabled?: boolean;
 }
 
-export default function TalkButton({ onClick }: Props) {
+export default function TalkButton({ onClick, disabled = false }: Props) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-deep to-green-mid border-2 border-green-bright text-sm font-medium text-green-pale shadow-[0_0_0_0_rgba(87,181,141,0.35)] transition-all duration-300 hover:scale-[1.05] hover:border-green-glow"
+      disabled={disabled}
+      className={`relative flex h-24 w-24 items-center justify-center rounded-full border-2 text-sm font-medium text-greenPale shadow-lg transition-all duration-300
+        ${disabled
+          ? 'border-greenMid bg-greenDeep opacity-50 cursor-not-allowed'
+          : 'border-greenBright bg-gradient-to-br from-greenDeep to-greenMid hover:scale-[1.05] hover:border-greenGlow'
+        }`}
       aria-label="Start talk session"
     >
-      Talk
-      <span className="pointer-events-none absolute inset-0 rounded-full animate-pulse" />
+      <span className="text-base font-medium text-greenPale">Talk</span>
+      {!disabled && (
+        <span className="pointer-events-none absolute inset-0 rounded-full animate-pulse opacity-30 bg-greenMid" />
+      )}
     </button>
   );
 }

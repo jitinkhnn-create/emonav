@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BodyLocation, SessionStep, Session, IndianWord } from '../types';
 import { indianVocabulary } from '../data/indianVocabulary';
 import { getAIResponse } from '../services/ai';
@@ -70,6 +70,9 @@ export default function useSession(language: 'en' | 'hi', name: string): UseSess
   const [step4UserResponded, setStep4UserResponded] = useState(false);
   const [canTypeFallback] = useState(false);
 
+  // Ref so stopListening always reads the latest transcript without stale closure
+  const transcriptRef = useRef('');
+
   const stepLabel = useMemo(() => {
     const labels: Record<SessionStep, string> = {
       idle: 'Ready to begin',
@@ -96,34 +99,35 @@ export default function useSession(language: 'en' | 'hi', name: string): UseSess
   }, [step]);
 
   const startListening = useCallback(() => {
-    if (step === 'idle') {
-      setStep('step1_listening');
-    }
-  }, [step]);
+    setStep('step1_listening');
+  }, []);
 
   const stopListening = useCallback(() => {
-    if (step === 'step1_listening') {
-      setStep('step1_responding');
-    }
-    if (step === 'step3_underneath') {
-      setStep3Transcript(transcript);
-      setStep('step3_responding');
-    }
-  }, [step, transcript]);
+    setStep((current) => {
+      if (current === 'step1_listening') return 'step1_responding';
+      if (current === 'step3_underneath') {
+        // Capture transcript from ref (always current, no stale closure)
+        setStep3Transcript(transcriptRef.current);
+        return 'step3_responding';
+      }
+      return current;
+    });
+  }, []);
 
   useEffect(() => {
     if (step === 'step1_responding') {
       const run = async () => {
         const prompt = `You are EmoNav, a calm voice companion. The user just told you what happened in their day. Your job: mirror back what they said in 1-2 short sentences. Paraphrase warmly. Do not judge. Do not label emotions as good or bad. End with: ask where they feel it in their body. Example: User said: \"My friend didn't save me a seat at lunch and everyone laughed\" You say: \"So your friend didn't save you a spot, and that moment with everyone watching felt like a lot. Where are you feeling this right now — in your body?\" Keep response under 40 words. Speak simply. This is a teenager.`;
         setResponse('Mmm...');
-        const result = await getAIResponse(prompt, transcript || '');
+        const captured = transcriptRef.current;
+        const result = await getAIResponse(prompt, captured || '');
         setResponse(result);
-        setStep1Transcript(transcript);
+        setStep1Transcript(captured);
         setTimeout(() => setStep('step2_body'), 400);
       };
       run();
     }
-  }, [step, transcript]);
+  }, [step]);
 
   useEffect(() => {
     if (step === 'step2_responding' && bodyLocation) {
@@ -141,21 +145,22 @@ export default function useSession(language: 'en' | 'hi', name: string): UseSess
   useEffect(() => {
     if (step === 'step3_responding') {
       const run = async () => {
-        if (dontKnowPatterns.some((pattern) => pattern.test(transcript))) {
+        const current = transcriptRef.current;
+        if (dontKnowPatterns.some((pattern) => pattern.test(current))) {
           setResponse("That's completely fine. Sometimes feelings don't have names yet. Let's just sit with it.");
           setTimeout(() => setStep('step4_witness'), 500);
           return;
         }
 
-        const prompt = `You are EmoNav. The user is exploring what's underneath their surface emotion. Surface emotion context: ${step1Transcript} and ${bodyLocation}. What they just said about the deeper feeling: ${transcript}. Respond in 1-2 sentences. Acknowledge what they found underneath. Offer ONE Indian emotion word (from this list) that matches, with its meaning: abhimaan (अभिमान): loving hurt when someone you care about lets you down; karuna (करुणा): compassion mixed with sadness; vairagya (वैराग्य): feeling detached, like things don't matter anymore (not depression — clarity); sneha (स्नेह): tender affection, warmth; viraha (विरह): pain of missing someone or something; glani (ग्लानि): a heavy guilt or self-disappointment; udvega (उद्वेग): anxious agitation, can't settle; vishada (विषाद): a deep, quiet despair; amarsha (अमर्ष): indignation — "this is not right and I feel it in my bones"; nirveda (निर्वेद): weariness with the world, tired of everything; harsha (हर्ष): a burst of joy or delight; mudita (मुदिता): happiness at someone else's happiness; dhairya (धैर्य): patient courage, steadiness under pressure. Format: \"In Hindi there's a word '[word]' ([devanagari]) — it means [meaning]. Is that close?\" Keep total response under 50 words. Do not judge. Do not advise.`;
+        const prompt = `You are EmoNav. The user is exploring what's underneath their surface emotion. Surface emotion context: ${step1Transcript} and ${bodyLocation}. What they just said about the deeper feeling: ${current}. Respond in 1-2 sentences. Acknowledge what they found underneath. Offer ONE Indian emotion word (from this list) that matches, with its meaning: abhimaan (अभिमान): loving hurt when someone you care about lets you down; karuna (करुणा): compassion mixed with sadness; vairagya (वैराग्य): feeling detached, like things don't matter anymore (not depression — clarity); sneha (स्नेह): tender affection, warmth; viraha (विरह): pain of missing someone or something; glani (ग्लानि): a heavy guilt or self-disappointment; udvega (उद्वेग): anxious agitation, can't settle; vishada (विषाद): a deep, quiet despair; amarsha (अमर्ष): indignation — "this is not right and I feel it in my bones"; nirveda (निर्वेद): weariness with the world, tired of everything; harsha (हर्ष): a burst of joy or delight; mudita (मुदिता): happiness at someone else's happiness; dhairya (धैर्य): patient courage, steadiness under pressure. Format: \"In Hindi there's a word '[word]' ([devanagari]) — it means [meaning]. Is that close?\" Keep total response under 50 words. Do not judge. Do not advise.`;
         setResponse('Mmm...');
-        const result = await getAIResponse(prompt, transcript);
+        const result = await getAIResponse(prompt, current);
         setResponse(result);
         setTimeout(() => setStep('step4_witness'), 400);
       };
       run();
     }
-  }, [step, transcript, bodyLocation, step1Transcript]);
+  }, [step, bodyLocation, step1Transcript]);
 
   const selectBodyLocation = useCallback((location: BodyLocation) => {
     setBodyLocation(location);
@@ -170,41 +175,37 @@ export default function useSession(language: 'en' | 'hi', name: string): UseSess
 
   const markStep4Response = useCallback(() => {
     setStep4UserResponded(true);
+    setStep('complete');
   }, []);
 
   const completeSession = useCallback(() => {
+    const s1 = step1Transcript;
+    const s3 = transcriptRef.current;
     const allWordsUsed = Array.from(new Set([
-      ...extractEmotionWords(step1Transcript),
-      ...extractEmotionWords(transcript),
+      ...extractEmotionWords(s1),
+      ...extractEmotionWords(s3),
       ...selectedWords
     ]));
     return {
       id: crypto.randomUUID(),
       date: new Date().toISOString().slice(0, 10),
-      step1Transcript,
+      step1Transcript: s1,
       step2BodyLocation: bodyLocation,
       step2Words: selectedWords,
-      step3Transcript,
-      step3Words: extractEmotionWords(transcript),
+      step3Transcript: step3Transcript || s3,
+      step3Words: extractEmotionWords(s3),
       step4UserResponded,
       allWordsUsed,
       indianWordsOffered: indianWordOffer ? [indianWordOffer] : [],
       indianWordsSelected: selectedWords.filter((word) => indianWordOffer?.word === word),
       durationSeconds: 0
     };
-  }, [bodyLocation, indianWordOffer, selectedWords, step1Transcript, step3Transcript, transcript, step4UserResponded]);
+  }, [bodyLocation, indianWordOffer, selectedWords, step1Transcript, step3Transcript, step4UserResponded]);
 
-  useEffect(() => {
-    if (step === 'step4_witness') {
-      setTimeout(() => {
-        setStep('complete');
-      }, 6000);
-    }
-  }, [step]);
-
-  const setFallbackTranscript = (text: string) => {
+  const setFallbackTranscript = useCallback((text: string) => {
+    transcriptRef.current = text;
     setTranscript(text);
-  };
+  }, []);
 
   return {
     step,
