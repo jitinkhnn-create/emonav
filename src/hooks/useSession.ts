@@ -29,6 +29,11 @@ const bodyOptions: Record<BodyLocation, { label: string; suggestions: string[]; 
     label: 'Hands',
     suggestions: ['restless', 'clenching', 'wanting to act'],
     indian: { word: 'uchatan', devanagari: 'उचाटन', meaning: 'restless unease — wanting to escape', category: 'fear' }
+  },
+  legs: {
+    label: 'Legs',
+    suggestions: ['heavy', 'shaky', 'restless'],
+    indian: { word: 'shanta', devanagari: 'शांत', meaning: 'deep inner peace — the quiet that holds everything', category: 'peace' }
   }
 };
 

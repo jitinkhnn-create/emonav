@@ -15,7 +15,7 @@ export interface SpeechRecognitionOptions {
 
 export default function useSpeechRecognition(options: SpeechRecognitionOptions) {
   const { language, onResult, onError, onEnd } = options;
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | undefined>(undefined);
@@ -33,13 +33,13 @@ export default function useSpeechRecognition(options: SpeechRecognitionOptions) 
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0]?.transcript?.trim() || '';
+    recognition.onresult = (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || '';
       setTranscript(transcript);
       onResult?.(transcript);
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: any) => {
       const message = event.error || 'Speech recognition error.';
       setError(message);
       onError?.(message);
