@@ -49,9 +49,7 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
     },
     onError: () => {},
     onEnd: () => {
-      if (step === 'step1_listening' || step === 'step3_underneath') {
-        stopListening();
-      }
+      // Do NOT auto-advance — let the user tap Done so they can hear it back first
     }
   });
 
@@ -158,11 +156,11 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
             {/* AI mirror response */}
             <p className="text-sm leading-7 text-textPrimary">{response}</p>
 
-            {/* Hear back your words */}
-            {transcript && (
+            {/* Hear back your own words */}
+            {fallbackText && (
               <button
                 type="button"
-                onClick={() => speak(transcript)}
+                onClick={() => speak(fallbackText)}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-white/6 px-4 py-2 text-xs text-textSecondary hover:bg-white/10"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -172,10 +170,12 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
               </button>
             )}
 
-            {/* Listener perspective */}
+            {/* Listener perspective — loads automatically */}
             <div className="rounded-2xl border border-white/10 bg-white/4 p-4 space-y-3">
               <p className="text-xs uppercase tracking-[0.2em] text-textMuted">How might this have sounded to them?</p>
-              {listenerPerspective ? (
+              {listenerPerspectiveLoading && !listenerPerspective ? (
+                <p className="text-xs text-textMuted animate-pulse">Thinking...</p>
+              ) : listenerPerspective ? (
                 <div className="space-y-2">
                   <p className="text-sm leading-7 text-textPrimary">{listenerPerspective}</p>
                   <button
@@ -189,16 +189,7 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
                     Hear it
                   </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={fetchListenerPerspective}
-                  disabled={listenerPerspectiveLoading}
-                  className="rounded-full bg-white/8 px-4 py-2 text-xs text-textSecondary hover:bg-white/12 disabled:opacity-50"
-                >
-                  {listenerPerspectiveLoading ? 'Thinking...' : 'Show me'}
-                </button>
-              )}
+              ) : null}
             </div>
 
             {/* Advance to next step */}
