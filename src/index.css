@@ -1,111 +1,102 @@
-:root {
-  color-scheme: dark;
-  --bg-primary: #0C0C0F;
-  --bg-secondary: #111820;
-  --bg-card: rgba(255, 255, 255, 0.06);
-  --bg-card-border: rgba(255, 255, 255, 0.14);
-  --green-deep: #1A4A3A;
-  --green-mid: #2D6A5A;
-  --green-bright: #4AAF85;
-  --green-glow: #6DC9A4;
-  --green-text: #9EC4B0;
-  --green-light: #BCD8C8;
-  --green-pale: #D4EDE0;
-  --gold: #C8A86A;
-  --gold-dim: rgba(200, 168, 106, 0.3);
-  --text-primary: #D4EBE0;
-  --text-secondary: #8FBBA8;
-  --text-muted: #5E8B79;
-  --text-dim: #4A7060;
-  --border-subtle: rgba(255, 255, 255, 0.10);
-}
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+}
+
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   html {
     font-family: 'DM Sans', sans-serif;
-    scroll-behavior: smooth;
+    font-size: 14px;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     margin: 0;
     min-height: 100vh;
-    background: radial-gradient(circle at top left, rgba(45, 106, 90, 0.22), transparent 30%),
-      radial-gradient(circle at top right, rgba(92, 170, 138, 0.10), transparent 28%),
-      var(--bg-primary);
-    color: var(--text-primary);
+    background-color: #0C0C0F;
+    color: #E8E6E1;
+    overscroll-behavior: none;
   }
 
-  button,
-  input,
-  select,
-  textarea {
+  button, input, select, textarea {
     font: inherit;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 }
 
 @layer components {
   .card {
-    @apply rounded-3xl border border-[var(--bg-card-border)] bg-[var(--bg-card)] backdrop-blur-sm;
+    background: #1A1D24;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
   }
 
-  .glass-panel {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 28px;
-    box-shadow: 0 18px 90px rgba(0, 0, 0, 0.12);
+  .btn-primary {
+    @apply bg-green text-white rounded-xl px-5 py-3 font-medium text-sm transition-colors hover:bg-greenLight active:scale-95;
   }
-}
 
-@keyframes pulse-slow {
-  0%, 100% {
-    opacity: 0.4;
+  .btn-secondary {
+    @apply bg-transparent text-textSecondary rounded-xl px-5 py-3 font-medium text-sm border border-borderSubtle transition-colors hover:bg-bgCardHover active:scale-95;
   }
-  50% {
-    opacity: 1;
-  }
-}
 
-@keyframes pulse-ring {
-  0% {
-    r: 60px;
-    opacity: 1;
+  .step-indicator {
+    @apply text-[11px] uppercase tracking-widest text-textMuted font-body;
   }
-  100% {
-    r: 100px;
-    opacity: 0;
+
+  .transcript-text {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #E8E6E1;
+    font-family: 'DM Sans', sans-serif;
   }
 }
 
-.animate-pulse-slow {
-  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Recording pulse animation */
+@keyframes recordPulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.7); opacity: 0; }
 }
 
-.delay-150 {
-  animation-delay: 150ms;
+.record-pulse::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgba(226, 75, 74, 0.3);
+  animation: recordPulse 1.4s ease-out infinite;
 }
 
-.fade-enter {
-  opacity: 0;
+.record-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: rgba(226, 75, 74, 0.15);
+  animation: recordPulse 1.4s ease-out 0.4s infinite;
 }
 
-.fade-enter-active {
-  opacity: 1;
-  transition: opacity 400ms ease;
+/* Fade-in for text reveal */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.fade-exit {
-  opacity: 1;
+.fade-in {
+  animation: fadeInUp 0.5s ease-out forwards;
 }
 
-.fade-exit-active {
-  opacity: 0;
-  transition: opacity 400ms ease;
-}
+.fade-in-delay-1 { animation-delay: 0.3s; opacity: 0; animation-fill-mode: forwards; animation-name: fadeInUp; animation-duration: 0.5s; }
+.fade-in-delay-2 { animation-delay: 0.6s; opacity: 0; animation-fill-mode: forwards; animation-name: fadeInUp; animation-duration: 0.5s; }
+.fade-in-delay-3 { animation-delay: 0.9s; opacity: 0; animation-fill-mode: forwards; animation-name: fadeInUp; animation-duration: 0.5s; }

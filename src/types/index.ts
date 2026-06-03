@@ -1,51 +1,52 @@
-export type BodyLocation = 'head' | 'throat' | 'chest' | 'stomach' | 'hands' | 'legs';
-
-export type SessionStep =
-  | 'idle'
-  | 'step1_listening'
-  | 'step1_responding'
-  | 'step2_body'
-  | 'step2_responding'
-  | 'step3_underneath'
-  | 'step3_responding'
-  | 'step4_witness'
-  | 'complete';
-
-export interface IndianWord {
-  word: string;
-  devanagari: string;
-  meaning: string;
-  category: string;
-}
-
-export interface WordEntry {
-  word: string;
-  date: string;
-  sessionId: string;
-  isIndian: boolean;
-  bodyLocation?: BodyLocation;
-  context?: string;
-}
-
 export interface Session {
   id: string;
-  date: string;
-  step1Transcript: string;
-  step2BodyLocation: BodyLocation | null;
-  step2Words: string[];
-  step3Transcript: string;
-  step3Words: string[];
-  step4UserResponded: boolean;
-  allWordsUsed: string[];
-  indianWordsOffered: IndianWord[];
-  indianWordsSelected: string[];
+  userId: string;
+  createdAt: string;
   durationSeconds: number;
+
+  transcript: string;
+  audioUrl: string; // Blob URL — local only, not persisted
+
+  howItLandsText: string;
+
+  didChange: boolean;
+  changeCount: number;
+
+  calmingTechniqueShown: string;
+
+  scores: {
+    confidence: number;
+    clarity: number;
+    emotionalIntensity: number;
+  };
+  dominantEmotions: string[];
+  wordPatterns: {
+    negativeWords: string[];
+    positiveWords: string[];
+    repeatedWords: string[];
+  };
 }
 
-export interface UserData {
-  name: string;
-  language: 'en' | 'hi';
+export interface UserProfile {
+  uid: string;
+  displayName: string;
+  email: string;
+  photoURL: string;
+  createdAt: string;
+  totalSessions: number;
+}
+
+export interface ReportData {
   sessions: Session[];
-  words: WordEntry[];
-  firstSessionDate: string;
+  periodDays: number;
+  averageConfidence: number;
+  averageClarity: number;
+  averageEmotionalIntensity: number;
+  wordFrequencyMap: Record<string, number>;
+  trendsOverTime: {
+    date: string;
+    confidence: number;
+    clarity: number;
+    emotionalIntensity: number;
+  }[];
 }
