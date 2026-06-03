@@ -23,11 +23,15 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
     transcript,
     bodyLocation,
     response,
+    listenerPerspective,
+    listenerPerspectiveLoading,
     selectedWords,
     indianWordOffer,
     stepLabel,
     startListening,
     stopListening,
+    proceedToBodyStep,
+    fetchListenerPerspective,
     selectBodyLocation,
     selectSuggestedWord,
     markStep4Response,
@@ -113,9 +117,21 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
                 : 'Take your time. Just tell me what happened.'}
             </p>
             {fallbackText && (
-              <p className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-textPrimary">
-                {fallbackText}
-              </p>
+              <div className="w-full space-y-2">
+                <p className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-textPrimary">
+                  {fallbackText}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => speak(fallbackText)}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-white/6 px-4 py-2 text-xs text-textSecondary hover:bg-white/10"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.84Z" />
+                  </svg>
+                  Hear it back
+                </button>
+              </div>
             )}
             <div className="flex flex-wrap justify-center gap-3">
               <button
@@ -138,8 +154,61 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
         )}
 
         {step === 'step1_responding' && (
-          <div className="space-y-4 pt-2">
+          <div className="space-y-5 pt-2">
+            {/* AI mirror response */}
             <p className="text-sm leading-7 text-textPrimary">{response}</p>
+
+            {/* Hear back your words */}
+            {transcript && (
+              <button
+                type="button"
+                onClick={() => speak(transcript)}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-white/6 px-4 py-2 text-xs text-textSecondary hover:bg-white/10"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                  <path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.84Z" />
+                </svg>
+                Hear your words back
+              </button>
+            )}
+
+            {/* Listener perspective */}
+            <div className="rounded-2xl border border-white/10 bg-white/4 p-4 space-y-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-textMuted">How might this have sounded to them?</p>
+              {listenerPerspective ? (
+                <div className="space-y-2">
+                  <p className="text-sm leading-7 text-textPrimary">{listenerPerspective}</p>
+                  <button
+                    type="button"
+                    onClick={() => speak(listenerPerspective)}
+                    className="flex items-center gap-2 text-xs text-textMuted hover:text-textSecondary"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                      <path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.84Z" />
+                    </svg>
+                    Hear it
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={fetchListenerPerspective}
+                  disabled={listenerPerspectiveLoading}
+                  className="rounded-full bg-white/8 px-4 py-2 text-xs text-textSecondary hover:bg-white/12 disabled:opacity-50"
+                >
+                  {listenerPerspectiveLoading ? 'Thinking...' : 'Show me'}
+                </button>
+              )}
+            </div>
+
+            {/* Advance to next step */}
+            <button
+              type="button"
+              onClick={proceedToBodyStep}
+              className="rounded-full bg-greenBright px-5 py-3 text-sm font-medium text-bg"
+            >
+              Continue →
+            </button>
           </div>
         )}
 
@@ -167,6 +236,18 @@ export default function SessionScreen({ language, name, onComplete, onCancel }: 
                 placeholder="Type here, or just speak..."
                 className="min-h-[120px] w-full rounded-2xl border border-white/12 bg-white/6 p-4 text-sm text-textPrimary placeholder:text-textMuted outline-none focus:border-greenBright/50"
               />
+              {fallbackText.trim() && (
+                <button
+                  type="button"
+                  onClick={() => speak(fallbackText)}
+                  className="flex items-center justify-center gap-2 rounded-full bg-white/6 px-4 py-2 text-xs text-textSecondary hover:bg-white/10"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                    <path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.84Z" />
+                  </svg>
+                  Hear it back
+                </button>
+              )}
               <button
                 className="rounded-full bg-greenBright px-5 py-3 text-sm font-medium text-bg"
                 type="button"

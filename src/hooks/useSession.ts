@@ -45,11 +45,15 @@ export interface UseSessionResult {
   bodyLocation: BodyLocation | null;
   bodyPrompt: string;
   response: string;
+  listenerPerspective: string;
+  listenerPerspectiveLoading: boolean;
   selectedWords: string[];
   indianWordOffer: IndianWord | null;
   stepLabel: string;
   startListening: () => void;
   stopListening: () => void;
+  proceedToBodyStep: () => void;
+  fetchListenerPerspective: () => void;
   selectBodyLocation: (location: BodyLocation) => void;
   selectSuggestedWord: (word: string) => void;
   markStep4Response: () => void;
@@ -69,6 +73,8 @@ export default function useSession(language: 'en' | 'hi', name: string): UseSess
   const [indianWordOffer, setIndianWordOffer] = useState<IndianWord | null>(null);
   const [step4UserResponded, setStep4UserResponded] = useState(false);
   const [canTypeFallback] = useState(false);
+  const [listenerPerspective, setListenerPerspective] = useState('');
+  const [listenerPerspectiveLoading, setListenerPerspectiveLoading] = useState(false);
 
   // Ref so stopListening always reads the latest transcript without stale closure
   const transcriptRef = useRef('');
@@ -123,11 +129,25 @@ export default function useSession(language: 'en' | 'hi', name: string): UseSess
         const result = await getAIResponse(prompt, captured || '');
         setResponse(result);
         setStep1Transcript(captured);
-        setTimeout(() => setStep('step2_body'), 400);
+        setListenerPerspective('');
       };
       run();
     }
   }, [step]);
+
+  const proceedToBodyStep = useCallback(() => {
+    setStep('step2_body');
+  }, []);
+
+  const fetchListenerPerspective = useCallback(async () => {
+    const captured = transcriptRef.current;
+    if (!captured.trim() || listenerPerspectiveLoading) return;
+    setListenerPerspectiveLoading(true);
+    const prompt = `You are EmoNav. The user shared this about what happened: "${captured}". Imagine you are someone who cares about both people in this situation. In 1-2 sentences, describe how the OTHER person (the listener, not the user speaking) might have felt or experienced that moment. Start with "They may have felt..." or "To them, this might have felt...". Keep it under 35 words. Be gentle and non-judgmental. No advice, no solutions.`;
+    const result = await getAIResponse(prompt, captured);
+    setListenerPerspective(result);
+    setListenerPerspectiveLoading(false);
+  }, [listenerPerspectiveLoading]);
 
   useEffect(() => {
     if (step === 'step2_responding' && bodyLocation) {
@@ -213,11 +233,15 @@ export default function useSession(language: 'en' | 'hi', name: string): UseSess
     bodyLocation,
     bodyPrompt,
     response,
+    listenerPerspective,
+    listenerPerspectiveLoading,
     selectedWords,
     indianWordOffer,
     stepLabel,
     startListening,
     stopListening,
+    proceedToBodyStep,
+    fetchListenerPerspective,
     selectBodyLocation,
     selectSuggestedWord,
     markStep4Response,
