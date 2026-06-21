@@ -361,7 +361,7 @@
       <h2>Your moments</h2>
       <div id="journalList"><p class="muted" style="margin-top:8px">Nothing here yet. Your saved moments will appear here.</p></div>
     </div>
-    <p class="notice">Prototype note: entries live only in this session. The full app stores them privately on your device.</p>
+    <p class="notice">Your moments are saved privately on this device, in this browser. Clearing your browser data will remove them.</p>
   </section>
 
   <!-- ================= REPORTS ================= -->
@@ -404,6 +404,36 @@
 </div>
 
 <script>
+/* ================= persistence ================= */
+/* Journal is stored in localStorage so saved moments (and, later, rehearsal
+   follow-ups) survive a reload. Degrades silently to in-memory if storage is
+   unavailable (private mode / some mobile webviews). */
+const STORAGE_KEY = "emonav_journal_v1";
+
+function loadJournal(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return [];
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr)) return [];
+    // revive `when` from its stored string back into a Date object —
+    // renderJournal/renderReports call e.when.toLocaleString() and would
+    // throw on a plain string.
+    return arr.map(e=>({ ...e, when: new Date(e.when) }))
+              .filter(e=> e.when instanceof Date && !isNaN(e.when));
+  }catch(err){
+    return []; // corrupt or unavailable storage -> start clean, in-memory
+  }
+}
+
+function saveJournal(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(S.journal));
+  }catch(err){
+    /* storage unavailable or full — keep running from memory this session */
+  }
+}
+
 /* ================= state ================= */
 const S = {
   takes: 0,
@@ -412,7 +442,7 @@ const S = {
   startTime: 0,
   duration: 0,
   analysis: null,
-  journal: [],            // in-memory only (artifact constraint)
+  journal: loadJournal(),   // hydrated from localStorage; [] if none/unavailable
   typedMode: false,
   recording: false,
   mode: 'burst',
@@ -1140,15 +1170,24 @@ function saveEntry(){
     userCorrected:!!S.userRelabel,
     mode:S.mode, listener:S.listener||""
   });
+  saveJournal();
   go('journal');
 }
 function discardEntry(){ go('home'); }
+
+function deleteEntry(idx){
+  if(idx<0 || idx>=S.journal.length) return;
+  S.journal.splice(idx,1);
+  saveJournal();
+  renderJournal();
+}
 
 function renderJournal(){
   const list=document.getElementById('journalList');
   if(!S.journal.length){ list.innerHTML='<p class="muted" style="margin-top:8px">Nothing here yet. Your saved moments will appear here.</p>'; return; }
   list.innerHTML="";
-  [...S.journal].reverse().forEach(e=>{
+  // iterate with original index so delete targets the right entry
+  S.journal.map((e,i)=>({e,i})).reverse().forEach(({e,i})=>{
     const pills=(e.emotions||[]).map(x=>`<span class="pill">${x.name} · ${x.rasa}</span>`).join("");
     list.insertAdjacentHTML('beforeend',
       `<div class="entry">
@@ -1156,6 +1195,7 @@ function renderJournal(){
         ${e.topic?'<div style="font-size:13px;font-weight:600;margin-top:2px">'+(e.mode==='rehearse'?'🎯 ':'🌊 ')+e.topic+(e.mode==='rehearse'&&e.listener?' → '+e.listener:'')+'</div>':''}
         <div class="snip">"${e.snippet}"</div>
         <div>${pills}</div>
+        <button onclick="deleteEntry(${i})" style="margin-top:8px;border:0;background:none;color:var(--ink-soft);font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:0">Delete</button>
       </div>`);
   });
 }
