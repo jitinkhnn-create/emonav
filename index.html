@@ -200,10 +200,10 @@
       <input id="listenerInput" placeholder="e.g. my father, my teacher, the interview panel, a friend who's been distant" style="width:100%;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:11px;font:inherit;font-size:14px;background:#FAFCFA">
     </div>
     <div id="transcriptBox" class="empty">Your words will appear here as you speak…</div>
-    <textarea id="typedInput" placeholder="Or type what you're feeling here…" style="display:none"></textarea>
+    <textarea id="typedInput" placeholder="No mic? Just type what you're feeling here…"></textarea>
     <button class="btn btn-primary" id="recBtn" onclick="toggleRecording()">Start speaking</button>
     <div class="btn-row">
-      <button class="btn btn-ghost" onclick="toggleTyped()" id="typedToggle">Type instead</button>
+      <button class="btn btn-primary" onclick="submitTyped()" id="typedSubmit">Show me the mirror</button>
       <button class="btn btn-ghost" onclick="go('home')">Cancel</button>
     </div>
   </section>
@@ -436,6 +436,15 @@ function toggleTyped(){
   document.getElementById('transcriptBox').style.display = S.typedMode?'none':'block';
   document.getElementById('typedToggle').textContent = S.typedMode?'Speak instead':'Type instead';
   document.getElementById('recBtn').textContent = S.typedMode?'Done — show me the mirror':'Start speaking';
+}
+
+/* ================= typed submit (always-visible box) ================= */
+function submitTyped(){
+  const txt=document.getElementById('typedInput').value.trim();
+  if(txt.length<5){ alert("Write a little more first — say what's really going on."); return; }
+  if(S.recording){ try{ stopRec(); }catch(e){} }
+  S.transcript=txt; S.duration=0; S.takes++;
+  toMirror();
 }
 
 /* ================= recording ================= */

@@ -3,20 +3,17 @@
 // The live app is index.html. Its ONLY backend dependency is:
 //   POST /api/analyze   body: { prompt }   ->   { text }
 //
-// Everything else (auth, history, TTS, scoring) runs client-side in
-// index.html. There is no Firebase, no sessions, no /api/ai, no /api/infer.
-//
 // Provider order is controlled by LLM_PROVIDER:
 //   "auto"       -> try Workers AI, fall back to Gemini   (default)
 //   "cloudflare" -> Workers AI only
 //   "gemini"     -> Gemini only
 //
-// Bindings / env (Pages -> Settings -> Variables & Bindings):
-//   AI            : Workers AI binding (type "AI")            [for cloudflare/auto]
-//   CF_AI_MODEL   : e.g. "@cf/meta/llama-3.1-8b-instruct"    [plain var]
-//   GEMINI_API_KEY: secret                                    [for gemini/auto]
-//   GEMINI_MODEL  : e.g. "gemini-1.5-flash"                   [plain var]
-//   LLM_PROVIDER  : "auto" | "cloudflare" | "gemini"          [plain var, default auto]
+// Bindings / env (Pages -> Settings -> Variables & Bindings, OR wrangler.toml):
+//   AI            : Workers AI binding (type "AI")
+//   CF_AI_MODEL   : e.g. "@cf/google/gemma-4-26b-a4b-it"
+//   GEMINI_API_KEY: secret
+//   GEMINI_MODEL  : e.g. "gemini-2.5-flash"
+//   LLM_PROVIDER  : "auto" | "cloudflare" | "gemini"  (default auto)
 //
 // Errors are returned as real JSON ({ error, detail }) — never silent empty text.
 
@@ -35,7 +32,6 @@ export default {
       return handleAnalyze(request, env);
     }
 
-    // Everything else: serve the static site (index.html, styles, etc.)
     return env.ASSETS.fetch(request);
   },
 };
@@ -60,7 +56,6 @@ function json(request, body, status = 200) {
 }
 
 async function handleAnalyze(request, env) {
-  // 1. Parse + validate input
   let prompt;
   try {
     ({ prompt } = await request.json());
@@ -80,7 +75,6 @@ async function handleAnalyze(request, env) {
 
   let lastError = '';
 
-  // 2. Try Workers AI first (for auto / cloudflare)
   if (wantCF && env.AI && env.CF_AI_MODEL) {
     try {
       const text = await callWorkersAI(env, prompt);
@@ -91,7 +85,6 @@ async function handleAnalyze(request, env) {
       if (provider === 'cloudflare') {
         return json(request, { error: 'AI request failed', detail: lastError }, 502);
       }
-      // else fall through to Gemini
     }
   } else if (provider === 'cloudflare') {
     return json(
@@ -101,7 +94,6 @@ async function handleAnalyze(request, env) {
     );
   }
 
-  // 3. Gemini (for auto fallback / gemini)
   if (wantGemini && env.GEMINI_API_KEY) {
     try {
       const text = await callGemini(env, prompt);
@@ -118,12 +110,11 @@ async function handleAnalyze(request, env) {
     );
   }
 
-  // 4. Nothing worked
   return json(
     request,
     {
       error: 'No AI provider available',
-      detail: lastError || 'Set LLM_PROVIDER and configure AI / CF_AI_MODEL or GEMINI_API_KEY',
+      detail: lastError || 'Configure AI / CF_AI_MODEL or GEMINI_API_KEY',
     },
     502
   );
@@ -134,13 +125,13 @@ async function callWorkersAI(env, prompt) {
     messages: [{ role: 'user', content: prompt }],
     max_tokens: 1024,
   });
-  // Workers AI shapes vary by model; normalize the common ones.
   if (typeof out === 'string') return out.trim();
   return String(out?.response || out?.result?.response || '').trim();
 }
 
 async function callGemini(env, prompt) {
-  const model = env.GEMINI_MODEL || 'gemini-1.5-flash';
+  // gemini-1.5-* are SHUT DOWN (404 on v1beta). Default to a live model.
+  const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
   const endpoint =
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent` +
     `?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
