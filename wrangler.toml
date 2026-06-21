@@ -1,9 +1,12 @@
-# wrangler.toml — EmoNav (Cloudflare Pages, no-build / vanilla)
-# Repo root is the deployed site. No build step.
 name = "emonav"
 compatibility_date = "2026-03-22"
 pages_build_output_dir = "."
 
-# Workers AI binding (primary provider for LLM_PROVIDER=auto|cloudflare)
 [ai]
 binding = "AI"
+
+[vars]
+LLM_PROVIDER = "auto"
+CF_AI_MODEL = "@cf/google/gemma-4-26b-a4b-it"
+GEMINI_MODEL = "gemini-2.5-flash"
+PUBLIC_BASE_URL = "https://emonav.pages.dev"
