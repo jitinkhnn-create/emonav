@@ -1,3 +1,13 @@
+# wrangler.toml — EmoNav (Cloudflare Pages, no-build / vanilla)
+#
+# The repo root IS the deployed site. No Vite, no dist/, no build command.
+# In the Cloudflare Pages dashboard:
+#   Build command:           (empty)
+#   Build output directory:  .            (repo root served as-is)
+#
+# This file documents the Worker + bindings. Set the actual values in
+# Pages -> Settings -> Variables & Bindings (they don't live in git).
+
 name = "emonav"
 main = "_worker.js"
 compatibility_date = "2026-03-22"
@@ -5,3 +15,15 @@ compatibility_date = "2026-03-22"
 [assets]
 directory = "."
 binding = "ASSETS"
+
+# Workers AI binding (primary provider for LLM_PROVIDER=auto|cloudflare)
+[ai]
+binding = "AI"
+
+# Plain vars below are for local `wrangler dev` only. In production set
+# them in the Pages dashboard. Secrets (GEMINI_API_KEY) must NOT go here —
+# use `wrangler secret put GEMINI_API_KEY` or the dashboard.
+[vars]
+LLM_PROVIDER = "auto"
+CF_AI_MODEL = "@cf/google/gemma-4-26b-a4b-it"
+GEMINI_MODEL = "gemini-1.5-flash"
