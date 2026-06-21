@@ -123,7 +123,7 @@ async function handleAnalyze(request, env) {
 async function callWorkersAI(env, prompt) {
   const out = await env.AI.run(env.CF_AI_MODEL, {
     messages: [{ role: 'user', content: prompt }],
-    max_tokens: 1024,
+    max_tokens: 2048,
   });
   if (typeof out === 'string') return out.trim();
   return String(out?.response || out?.result?.response || '').trim();
@@ -141,7 +141,11 @@ async function callGemini(env, prompt) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.6, maxOutputTokens: 1024 },
+      generationConfig: {
+        temperature: 0.6,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json',
+      },
     }),
   });
 
@@ -150,5 +154,8 @@ async function callGemini(env, prompt) {
     throw new Error(data?.error?.message || `HTTP ${res.status}`);
   }
   const parts = data?.candidates?.[0]?.content?.parts || [];
-  return parts.map((p) => p.text || '').join('').trim();
+  let text = parts.map((p) => p.text || '').join('').trim();
+  // Strip ```json ... ``` fences if the model wrapped its output.
+  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  return text;
 }

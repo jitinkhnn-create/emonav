@@ -77,6 +77,10 @@
   #transcriptBox{min-height:90px;max-height:180px;overflow-y:auto;font-size:15px;background:#FAFCFA;border:1px dashed var(--line);border-radius:12px;padding:12px;margin-top:12px;color:var(--ink);}
   #transcriptBox.empty{color:#9AA8AD;}
   #typedInput{width:100%;min-height:110px;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:15px;resize:vertical;margin-top:12px;background:#FAFCFA;}
+  .path-or{display:flex;align-items:center;text-align:center;color:var(--ink-soft);font-size:13px;margin:18px 0 4px;}
+  .path-or::before,.path-or::after{content:"";flex:1;height:1px;background:var(--line);}
+  .path-or span{padding:0 12px;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
   .timer{font-variant-numeric:tabular-nums;font-weight:700;}
 
   /* ---------- mirror ---------- */
@@ -199,13 +203,18 @@
       <p class="muted" style="font-size:13px;margin-top:2px">Naming the listener lets the mirror show how it might land for <i>that</i> person.</p>
       <input id="listenerInput" placeholder="e.g. my father, my teacher, the interview panel, a friend who's been distant" style="width:100%;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:11px;font:inherit;font-size:14px;background:#FAFCFA">
     </div>
+    <!-- PATH 1: Speak -->
     <div id="transcriptBox" class="empty">Your words will appear here as you speak…</div>
-    <textarea id="typedInput" placeholder="No mic? Just type what you're feeling here…"></textarea>
-    <button class="btn btn-primary" id="recBtn" onclick="toggleRecording()">Start speaking</button>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="submitTyped()" id="typedSubmit">Show me the mirror</button>
-      <button class="btn btn-ghost" onclick="go('home')">Cancel</button>
-    </div>
+    <button class="btn btn-primary" id="recBtn" onclick="toggleRecording()">🎙️ Start speaking</button>
+
+    <!-- divider -->
+    <div class="path-or"><span>or type instead</span></div>
+
+    <!-- PATH 2: Type -->
+    <textarea id="typedInput" placeholder="Type what you're feeling here…" oninput="onTypedInput()"></textarea>
+    <button class="btn btn-primary" onclick="submitTyped()" id="typedSubmit" disabled>Show me the mirror</button>
+
+    <button class="btn btn-ghost" onclick="go('home')" style="margin-top:14px">Cancel</button>
   </section>
 
   <!-- ================= MIRROR ================= -->
@@ -422,7 +431,8 @@ function resetRecorder(){
   const tb=document.getElementById('transcriptBox');
   tb.textContent="Your words will appear here as you speak…"; tb.classList.add('empty');
   document.getElementById('typedInput').value="";
-  document.getElementById('recBtn').textContent="Start speaking";
+  const ts=document.getElementById('typedSubmit'); if(ts) ts.disabled=true;
+  document.getElementById('recBtn').textContent="🎙️ Start speaking";
   document.getElementById('recStatus').innerHTML="Tap the button below and speak freely.<br>No one is judging here.";
   document.getElementById('recRing').classList.remove('rec');
   document.getElementById('recIcon').textContent="🎙️";
@@ -439,6 +449,10 @@ function toggleTyped(){
 }
 
 /* ================= typed submit (always-visible box) ================= */
+function onTypedInput(){
+  const txt=document.getElementById('typedInput').value.trim();
+  document.getElementById('typedSubmit').disabled = txt.length<5;
+}
 function submitTyped(){
   const txt=document.getElementById('typedInput').value.trim();
   if(txt.length<5){ alert("Write a little more first — say what's really going on."); return; }
