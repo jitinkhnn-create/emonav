@@ -748,7 +748,16 @@ Rules: perception_tags has 2-4 short tags (2-4 words each). mirror_face is ONE e
     // robust JSON extraction: take the first { ... last }
     const a0=txt.indexOf("{"), a1=txt.lastIndexOf("}");
     if(a0===-1||a1===-1) throw new Error("No JSON found in AI response");
-    S.analysis = JSON.parse(txt.slice(a0,a1+1));
+    let jsonSlice = txt.slice(a0,a1+1);
+    try{
+      S.analysis = JSON.parse(jsonSlice);
+    }catch(parseErr){
+      // last-resort repair: strip trailing commas, normalise newlines inside the blob
+      const repaired = jsonSlice
+        .replace(/,\s*([}\]])/g, "$1")
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ");
+      S.analysis = JSON.parse(repaired);
+    }
     S.analysisFallback = false;
   }catch(err){
     S.analysisFallback = true;
