@@ -1,19 +1,1166 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EmoNav</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;700&family=Tiro+Devanagari+Hindi&display=swap"
-      rel="stylesheet"
-    />
-    <script type="module" crossorigin src="/assets/index-BlINun1u.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DfRRDFS9.css">
-  </head>
-  <body class="bg-bg text-textPrimary min-h-screen">
-    <div id="root"></div>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>EmoNav — Hear yourself first</title>
+<style>
+  :root{
+    --mist:#EEF2EF;
+    --card:#FFFFFF;
+    --ink:#25323A;
+    --ink-soft:#5B6B73;
+    --marigold:#E8A33D;
+    --marigold-deep:#C9831F;
+    --lotus:#C97B84;
+    --teal:#2E6E65;
+    --teal-soft:#DCEAE6;
+    --line:#DDE5E0;
+    --danger:#B4524B;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--mist);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+    font-size:16px;line-height:1.55;
+    display:flex;justify-content:center;
+  }
+  #app{width:100%;max-width:440px;min-height:100vh;display:flex;flex-direction:column;padding:0 18px 96px;}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 8px;}
+  .brand{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:22px;letter-spacing:.2px;}
+  .brand span{color:var(--marigold-deep);}
+  .tagline{font-size:12.5px;color:var(--ink-soft);margin-top:-2px;}
+  nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);z-index:40;}
+  nav .inner{width:100%;max-width:440px;display:flex;}
+  nav button{flex:1;border:0;background:none;padding:11px 0 13px;font-size:12px;color:var(--ink-soft);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;}
+  nav button .ic{font-size:19px;line-height:1;}
+  nav button.active{color:var(--teal);font-weight:600;}
+
+  /* ---------- shared ---------- */
+  .screen{display:none;flex-direction:column;flex:1;animation:fade .35s ease;}
+  .screen.show{display:flex;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-top:14px;}
+  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:700;margin-bottom:6px;}
+  h2{font-family:Georgia,serif;font-size:21px;font-weight:700;line-height:1.3;}
+  .muted{color:var(--ink-soft);font-size:14px;}
+  .btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:14px;transition:transform .08s;}
+  .btn:active{transform:scale(.985);}
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-gold{background:var(--marigold);color:#3A2A08;}
+  .btn-ghost{background:none;border:1.5px solid var(--line);color:var(--ink);}
+  .btn-row{display:flex;gap:10px;}
+  .btn-row .btn{margin-top:12px;}
+  .pill{display:inline-block;font-size:12.5px;padding:4px 11px;border-radius:99px;background:var(--teal-soft);color:var(--teal);font-weight:600;margin:3px 4px 0 0;}
+
+  /* ---------- breathing / mic ring (signature) ---------- */
+  .ringwrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 0 8px;}
+  .ring{
+    width:168px;height:168px;border-radius:50%;
+    background:radial-gradient(circle at 38% 32%, #FBE7C3 0%, var(--marigold) 46%, var(--lotus) 100%);
+    box-shadow:0 0 0 14px rgba(232,163,61,.13), 0 12px 36px rgba(201,123,132,.28);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .25s ease;
+  }
+  .ring .core{width:120px;height:120px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:38px;}
+  .ring.rec{animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
+  .ringlabel{margin-top:14px;font-size:14px;color:var(--ink-soft);text-align:center;}
+  @media (prefers-reduced-motion:reduce){.ring.rec{animation:none;}.ring{transition:none;}}
+
+  /* ---------- record ---------- */
+  #transcriptBox{min-height:90px;max-height:180px;overflow-y:auto;font-size:15px;background:#FAFCFA;border:1px dashed var(--line);border-radius:12px;padding:12px;margin-top:12px;color:var(--ink);}
+  #transcriptBox.empty{color:#9AA8AD;}
+  #typedInput{width:100%;min-height:110px;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:15px;resize:vertical;margin-top:12px;background:#FAFCFA;}
+  .timer{font-variant-numeric:tabular-nums;font-weight:700;}
+
+  /* ---------- mirror ---------- */
+  .mirror-num{font-family:Georgia,serif;color:var(--marigold-deep);font-weight:700;}
+  audio{width:100%;margin-top:10px;}
+  .takeaway{background:#FBF6EC;border:1px solid #F0DFC0;border-radius:12px;padding:13px;font-size:14.5px;margin-top:10px;}
+  .loading{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:14px;margin-top:10px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--marigold);animation:blink 1s infinite alternate;}
+  @keyframes blink{to{opacity:.25;transform:translateY(-3px);}}
+
+  /* ---------- perception mirror ---------- */
+  .mirror-frame{position:relative;width:150px;height:185px;margin:18px auto 6px;
+    border-radius:75px/92px;
+    background:linear-gradient(165deg,#FDFEFD 0%,#E6EEE9 50%,#D3E0D8 100%);
+    box-shadow:0 0 0 7px var(--marigold),0 10px 26px rgba(201,123,132,.3),inset 0 -12px 26px rgba(91,107,115,.16);
+    display:flex;align-items:center;justify-content:center;}
+  .mirror-frame::after{content:"";position:absolute;top:14px;left:22px;width:34px;height:64px;border-radius:50%;
+    background:rgba(255,255,255,.65);filter:blur(6px);transform:rotate(18deg);}
+  .mirror-face{font-size:58px;}
+  .mirror-caption{text-align:center;font-size:12px;color:var(--ink-soft);margin-top:10px;}
+  .tagrow{text-align:center;margin-top:8px;}
+  .tag{display:inline-block;font-size:12.5px;padding:4px 11px;border-radius:99px;background:#F6EBDD;color:#8A5A14;border:1px solid #ECD8B8;margin:3px 3px 0;}
+  .verdict{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;font-weight:600;flex-wrap:wrap;}
+  .vchip{padding:3px 10px;border-radius:99px;font-size:12.5px;}
+  .v-clear{background:#DCEAE6;color:#1E4A43;}
+  .v-partial{background:#F6EBDD;color:#8A5A14;}
+  .v-scattered{background:#FDF1F0;color:#9C4640;}
+  .continuity{background:#EFF3FB;border:1px solid #D9E2F2;border-radius:12px;padding:12px;font-size:13.5px;margin-top:12px;color:#33518A;}
+
+  /* ---------- meters ---------- */
+  .meter{height:9px;background:#E6ECE8;border-radius:99px;overflow:hidden;margin-top:6px;}
+  .meter i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),#5BA293);transition:width .8s ease;}
+  .scorelabel{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin-top:10px;}
+  .emobar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13.5px;}
+  .emobar .name{width:118px;}
+  .emobar .bar{flex:1;height:9px;background:#E6ECE8;border-radius:99px;overflow:hidden;}
+  .emobar .bar i{display:block;height:100%;background:var(--lotus);border-radius:99px;}
+  .emobar .pct{width:36px;text-align:right;color:var(--ink-soft);font-size:12px;}
+
+  /* ---------- calm ---------- */
+  .modecard{display:flex;align-items:flex-start;gap:13px;width:100%;text-align:left;border:1px solid var(--line);background:#FAFCFA;border-radius:14px;padding:16px;margin:8px 0;cursor:pointer;font:inherit;transition:transform .08s,border-color .15s;}
+  .modecard:active{transform:scale(.99);}
+  .modecard:hover{border-color:var(--marigold);}
+  .modecard .mc-ic{font-size:30px;line-height:1;}
+  .modecard .mc-t{font-family:Georgia,serif;font-weight:700;font-size:17px;}
+  .modecard .mc-d{font-size:13px;color:var(--ink-soft);margin-top:3px;line-height:1.45;}
+  .modebadge{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;padding:3px 10px;border-radius:99px;margin-bottom:4px;}
+  .mb-burst{background:#DDEAF2;color:#2C5A78;}
+  .mb-rehearse{background:#E9E2F5;color:#5A3F8A;}
+  .breath-phase{font-family:Georgia,serif;font-size:20px;font-weight:700;}
+  .techitem{display:flex;align-items:flex-start;gap:11px;width:100%;text-align:left;border:1px solid var(--line);background:#FAFCFA;border-radius:13px;padding:13px;margin-top:10px;cursor:pointer;font:inherit;transition:transform .08s,border-color .15s;}
+  .techitem:active{transform:scale(.99);}
+  .techitem:hover{border-color:var(--marigold);}
+  .techitem .tic{font-size:22px;line-height:1.2;}
+  .techitem .tt{font-weight:600;font-size:15px;}
+  .techitem .td{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+  .techitem .fast{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9C4640;background:#FDF1F0;border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:middle;}
+  .reframe{border-left:3px solid var(--marigold);padding:4px 0 4px 12px;font-size:14.5px;margin-top:10px;}
+  .positive{background:var(--teal-soft);border-radius:12px;padding:13px;font-size:14.5px;margin-top:12px;color:#1E4A43;}
+
+  /* ---------- journal / reports ---------- */
+  .entry{border-bottom:1px solid var(--line);padding:13px 2px;}
+  .entry:last-child{border:0;}
+  .entry .when{font-size:12px;color:var(--ink-soft);}
+  .entry .snip{font-size:14px;margin-top:3px;}
+  .statgrid{display:flex;gap:10px;margin-top:14px;}
+  .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;text-align:center;}
+  .stat .big{font-family:Georgia,serif;font-size:24px;font-weight:700;color:var(--teal);}
+  .stat .lbl{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  svg.spark{width:100%;height:64px;margin-top:8px;}
+
+  /* ---------- crisis ---------- */
+  #crisisOverlay{position:fixed;inset:0;background:rgba(37,50,58,.55);display:none;align-items:flex-end;justify-content:center;z-index:60;}
+  #crisisOverlay.show{display:flex;}
+  .crisis-card{background:#fff;border-radius:22px 22px 0 0;max-width:440px;width:100%;padding:22px 20px 30px;}
+  .crisis-card h3{font-family:Georgia,serif;font-size:19px;}
+  .helpline{display:block;background:#FDF1F0;border:1px solid #F2D7D5;border-radius:12px;padding:12px;margin-top:10px;text-decoration:none;color:var(--ink);font-size:14.5px;}
+  .helpline b{color:var(--danger);}
+  .notice{font-size:12px;color:var(--ink-soft);margin-top:16px;text-align:center;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="brand">Emo<span>Nav</span></div>
+      <div class="tagline">Hear yourself first.</div>
+    </div>
+  </header>
+
+  <!-- ================= HOME ================= -->
+  <section class="screen show" id="scr-home">
+    <div class="ringwrap">
+      <div class="ring" id="homeRing"><div class="core">🪷</div></div>
+      <div class="ringlabel">A mirror for emotional moments.<br>Speak, hear yourself, then decide.</div>
+    </div>
+    <div class="card" style="padding:6px">
+      <button class="modecard" onclick="startSession('burst')">
+        <div class="mc-ic">🌊</div>
+        <div><div class="mc-t">I'm in it right now</div>
+        <div class="mc-d">Something's happened and you're feeling it. Vent it out, hear yourself, find a calmer perspective.</div></div>
+      </button>
+      <button class="modecard" onclick="startSession('rehearse')">
+        <div class="mc-ic">🎯</div>
+        <div><div class="mc-t">I'm preparing for something</div>
+        <div class="mc-d">A talk, interview, performance or hard conversation coming up. Rehearse it and see how it lands on the person who'll hear it.</div></div>
+      </button>
+    </div>
+    <p class="notice">EmoNav is a self-reflection tool, not a counsellor. If you're in distress, please reach a trusted person or a helpline — the app will help you find one.</p>
+  </section>
+
+  <!-- ================= RECORD ================= -->
+  <section class="screen" id="scr-record">
+    <div class="ringwrap">
+      <div class="ring" id="recRing"><div class="core" id="recIcon">🎙️</div></div>
+      <div class="ringlabel" id="recStatus">Tap the button below and speak freely.<br>No one is judging here.</div>
+    </div>
+    <div class="card" id="listenerCard" style="display:none">
+      <div class="eyebrow">Who will hear this?</div>
+      <p class="muted" style="font-size:13px;margin-top:2px">Naming the listener lets the mirror show how it might land for <i>that</i> person.</p>
+      <input id="listenerInput" placeholder="e.g. my father, my teacher, the interview panel, a friend who's been distant" style="width:100%;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:11px;font:inherit;font-size:14px;background:#FAFCFA">
+    </div>
+    <div id="transcriptBox" class="empty">Your words will appear here as you speak…</div>
+    <textarea id="typedInput" placeholder="Or type what you're feeling here…" style="display:none"></textarea>
+    <button class="btn btn-primary" id="recBtn" onclick="toggleRecording()">Start speaking</button>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="toggleTyped()" id="typedToggle">Type instead</button>
+      <button class="btn btn-ghost" onclick="go('home')">Cancel</button>
+    </div>
+  </section>
+
+  <!-- ================= MIRROR ================= -->
+  <section class="screen" id="scr-mirror">
+    <div class="card">
+      <div class="eyebrow">Mirror <span class="mirror-num">one</span></div>
+      <h2>Hear yourself</h2>
+      <p class="muted" style="margin-top:4px">This is exactly how you sounded just now.</p>
+      <audio id="selfAudio" controls></audio>
+      <div id="noAudioNote" class="muted" style="display:none;margin-top:8px;font-size:13px">No recording captured (typed mode) — read your words below slowly, in your own voice.</div>
+      <div class="takeaway" id="transcriptEcho"></div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Mirror <span class="mirror-num">two</span></div>
+      <h2 id="mirror2Heading">How it lands on a fair listener</h2>
+      <div class="loading" id="analysisLoading"><span class="dot"></span> Listening carefully to what you said…</div>
+      <div id="listenerBlock" style="display:none">
+        <div id="fallbackWarn" style="display:none;background:#FDF1F0;border:1px solid #F2D7D5;border-radius:12px;padding:11px;font-size:13px;color:#9C4640;margin-top:10px"></div>
+        <div class="mirror-frame"><div class="mirror-face" id="mirrorFace">🙂</div></div>
+        <div class="mirror-caption">How you come across right now</div>
+        <div class="tagrow" id="perceptionTags"></div>
+        <p class="muted" style="margin-top:14px">What a listener would <i>likely</i> sense about you (their impression, not a fact about you):</p>
+        <div class="takeaway" id="perceptionText"></div>
+        <div class="verdict">Is your message landing? <span class="vchip" id="clarityChip"></span></div>
+        <div class="takeaway" id="clarityText" style="margin-top:8px"></div>
+        <div class="continuity" id="continuityNote" style="display:none"></div>
+        <div id="voiceMismatch" style="display:none;background:#FFF4E0;border:1px solid #F0DCB0;border-radius:12px;padding:12px;font-size:13.5px;margin-top:12px;color:#8A5A14"></div>
+        <div id="voiceReadout" style="display:none;margin-top:12px">
+          <p class="muted" style="margin-bottom:2px">How your voice sounded (measured on your device):</p>
+          <div class="tagrow" id="voiceTags" style="text-align:left"></div>
+        </div>
+        <p class="muted" style="margin-top:14px">Same words, without your emotional charge:</p>
+        <button class="btn btn-ghost" style="margin-top:8px" onclick="speakNeutral()" id="neutralBtn">🔈 Hear it in a neutral voice</button>
+        <p class="muted" style="margin-top:14px">What a listener would actually take away:</p>
+        <div class="takeaway" id="takeawayText"></div>
+        <p class="muted" style="margin-top:12px">How they would likely feel and respond:</p>
+        <div class="takeaway" id="responseText"></div>
+      </div>
+    </div>
+
+    <div class="card" id="decideCard" style="display:none">
+      <div class="eyebrow">Your decision</div>
+      <h2>Is this what you want to keep?</h2>
+      <p class="muted" style="margin-top:4px">Saying it again isn't failure — it's exactly how this practice works.</p>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="reRecord()">↺ Say it again</button>
+        <button class="btn btn-gold" onclick="finalize()">Keep this ✓</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CALM ================= -->
+  <section class="screen" id="scr-calm">
+    <div class="ringwrap" style="padding-bottom:0">
+      <div class="ring" id="breathRing"><div class="core" style="font-size:17px;font-family:Georgia,serif;font-weight:700" id="breathCore">🪷</div></div>
+      <div class="ringlabel"><span class="breath-phase" id="calmHeadline">Let's settle this together</span><br><span class="muted" id="calmSub">Your words show <b id="emoName">this feeling</b>. Here's what helps with that.</span></div>
+    </div>
+
+    <div class="card" id="techMenuCard">
+      <div class="eyebrow" id="techEyebrow">Choose what feels right</div>
+      <p class="muted" style="margin-top:2px;font-size:13px" id="techIntro"></p>
+      <div id="techMenu"></div>
+    </div>
+
+    <div class="card" id="techPlayerCard" style="display:none">
+      <div class="eyebrow" id="playerTitle">Technique</div>
+      <div class="breath-phase" id="playerStep" style="font-size:18px;margin-top:4px"></div>
+      <p class="muted" id="playerHint" style="margin-top:8px"></p>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="playerNext" onclick="techNext()">Next step →</button>
+        <button class="btn btn-ghost" onclick="closeTechnique()">← Back to options</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">A steadier way to see it</div>
+      <div class="reframe" id="reframeText"></div>
+      <div class="positive" id="positiveText"></div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">A reading, not a verdict</div>
+      <div id="feltSense" style="font-size:15.5px;font-weight:600;margin:2px 0 4px"></div>
+      <p class="muted" style="font-size:13px">This is what your words and voice <i>suggest</i> — only you know what's really true. Does it fit?</p>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn btn-ghost" id="fitYes" onclick="confirmEmotion(true)">Yes, that fits</button>
+        <button class="btn btn-ghost" id="fitNo" onclick="openRelabel()">Not quite — let me say</button>
+      </div>
+      <div id="vocabOffer" style="display:none;background:#F3F0FB;border:1px solid #E0D9F2;border-radius:12px;padding:12px;font-size:13.5px;margin-top:6px;color:#4A3A7A"></div>
+      <div id="relabelBox" style="display:none;margin-top:10px">
+        <p class="muted" style="font-size:13px;margin-bottom:6px">What were you actually feeling? Pick what's closest — or your own word.</p>
+        <div id="relabelChips"></div>
+        <input id="relabelOther" placeholder="…or type it in your own words (any language)" style="width:100%;margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:14px;background:#FAFCFA">
+        <div class="btn-row">
+          <button class="btn btn-ghost" style="margin-top:8px" onclick="saveRelabel()">That's the one</button>
+          <button class="btn btn-ghost" style="margin-top:8px" onclick="noWord()">I don't have a word for it</button>
+        </div>
+      </div>
+      <div id="emoBars" style="margin-top:12px"></div>
+      <p class="muted" style="font-size:11.5px;margin-top:4px">Percentages are the app's rough weighting — not a precise measurement of how you feel.</p>
+      <div class="scorelabel"><span>Confidence in how you expressed it</span><span id="confPct"></span></div>
+      <div class="meter"><i id="confMeter" style="width:0%"></i></div>
+      <div class="scorelabel"><span>Emotional intensity (estimated)</span><span id="intenseLbl"></span></div>
+      <div class="meter"><i id="intenseMeter" style="width:0%;background:linear-gradient(90deg,var(--marigold),var(--lotus))"></i></div>
+      <div style="margin-top:12px" id="takesNote" class="muted"></div>
+    </div>
+    <button class="btn btn-gold" onclick="saveEntry()">Save to my journal</button>
+    <button class="btn btn-ghost" onclick="discardEntry()">Finish without saving</button>
+  </section>
+
+  <!-- ================= JOURNAL ================= -->
+  <section class="screen" id="scr-journal">
+    <div class="card">
+      <div class="eyebrow">Journal</div>
+      <h2>Your moments</h2>
+      <div id="journalList"><p class="muted" style="margin-top:8px">Nothing here yet. Your saved moments will appear here.</p></div>
+    </div>
+    <p class="notice">Prototype note: entries live only in this session. The full app stores them privately on your device.</p>
+  </section>
+
+  <!-- ================= REPORTS ================= -->
+  <section class="screen" id="scr-reports">
+    <div class="card">
+      <div class="eyebrow">Reports</div>
+      <h2>Understanding yourself over time</h2>
+      <div class="statgrid">
+        <div class="stat"><div class="big" id="statEntries">0</div><div class="lbl">moments</div></div>
+        <div class="stat"><div class="big" id="statTakes">–</div><div class="lbl">avg takes</div></div>
+        <div class="stat"><div class="big" id="statConf">–</div><div class="lbl">avg confidence</div></div>
+        <div class="stat"><div class="big" id="statClarity">–</div><div class="lbl">avg clarity</div></div>
+      </div>
+      <div style="margin-top:18px" class="eyebrow">Confidence trend</div>
+      <svg class="spark" id="sparkline" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
+      <div style="margin-top:14px" class="eyebrow">What you feel most often</div>
+      <div id="reportEmotions"><p class="muted" style="margin-top:6px">Save a few moments to see your patterns.</p></div>
+      <div style="margin-top:16px" class="eyebrow">What keeps coming back</div>
+      <div id="reportThemes"><p class="muted" style="margin-top:6px">Recurring situations and people will show up here.</p></div>
+    </div>
+  </section>
+
+  <nav><div class="inner">
+    <button id="nav-home" class="active" onclick="go('home')"><span class="ic">🪷</span>Home</button>
+    <button id="nav-journal" onclick="go('journal')"><span class="ic">📔</span>Journal</button>
+    <button id="nav-reports" onclick="go('reports')"><span class="ic">📈</span>Reports</button>
+  </div></nav>
+</div>
+
+<!-- ================= CRISIS ================= -->
+<div id="crisisOverlay">
+  <div class="crisis-card">
+    <h3>Right now, a person can help more than an app.</h3>
+    <p class="muted" style="margin-top:6px">What you shared sounds heavy. You deserve real support — please reach out to someone you trust, or one of these free helplines (India):</p>
+    <a class="helpline" href="tel:14416"><b>Tele-MANAS:</b> 14416 — 24×7, all languages</a>
+    <a class="helpline" href="tel:18005990019"><b>KIRAN:</b> 1800-599-0019 — 24×7 mental health support</a>
+    <a class="helpline" href="tel:1098"><b>Childline:</b> 1098 — if you're under 18</a>
+    <button class="btn btn-primary" onclick="closeCrisis()">I understand</button>
+  </div>
+</div>
+
+<script>
+/* ================= state ================= */
+const S = {
+  takes: 0,
+  transcript: "",
+  audioURL: null,
+  startTime: 0,
+  duration: 0,
+  analysis: null,
+  journal: [],            // in-memory only (artifact constraint)
+  typedMode: false,
+  recording: false,
+  mode: 'burst',
+  listener: ""
+};
+let recognition = null, mediaRecorder = null, chunks = [], timerInt = null;
+
+/* ================= navigation ================= */
+function go(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+  document.getElementById('scr-'+name).classList.add('show');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  const nb = document.getElementById('nav-'+name);
+  if(nb) nb.classList.add('active');
+  if(name==='journal') renderJournal();
+  if(name==='reports') renderReports();
+  window.scrollTo(0,0);
+}
+
+function startSession(mode){
+  S.mode = mode || 'burst';
+  S.takes = 0; S.listener="";
+  resetRecorder();
+  const rehearse = S.mode==='rehearse';
+  document.getElementById('listenerCard').style.display = rehearse ? 'block' : 'none';
+  document.getElementById('listenerInput').value="";
+  document.getElementById('recStatus').innerHTML = rehearse
+    ? "Say it the way you're planning to.<br>We'll show you how it might land."
+    : "Tap the button below and speak freely.<br>No one is judging here.";
+  go('record');
+}
+function reRecord(){
+  ttsCancel(); resetRecorder();
+  const rehearse = S.mode==='rehearse';
+  document.getElementById('listenerCard').style.display = rehearse ? 'block' : 'none';
+  document.getElementById('recStatus').innerHTML = rehearse
+    ? "Say it the way you're planning to.<br>We'll show you how it might land."
+    : "Tap the button below and speak freely.<br>No one is judging here.";
+  go('record');
+}
+
+function resetRecorder(){
+  S.transcript=""; S.audioURL=null; S.audioBlob=null; S.prosody=null; S.duration=0;
+  const tb=document.getElementById('transcriptBox');
+  tb.textContent="Your words will appear here as you speak…"; tb.classList.add('empty');
+  document.getElementById('typedInput').value="";
+  document.getElementById('recBtn').textContent="Start speaking";
+  document.getElementById('recStatus').innerHTML="Tap the button below and speak freely.<br>No one is judging here.";
+  document.getElementById('recRing').classList.remove('rec');
+  document.getElementById('recIcon').textContent="🎙️";
+  S.recording=false;
+}
+
+/* ================= typed fallback ================= */
+function toggleTyped(){
+  S.typedMode = !S.typedMode;
+  document.getElementById('typedInput').style.display = S.typedMode?'block':'none';
+  document.getElementById('transcriptBox').style.display = S.typedMode?'none':'block';
+  document.getElementById('typedToggle').textContent = S.typedMode?'Speak instead':'Type instead';
+  document.getElementById('recBtn').textContent = S.typedMode?'Done — show me the mirror':'Start speaking';
+}
+
+/* ================= recording ================= */
+async function toggleRecording(){
+  if(S.typedMode){
+    const txt=document.getElementById('typedInput').value.trim();
+    if(txt.length<5){ alert("Write a little more first — say what's really going on."); return; }
+    S.transcript=txt; S.duration=0; S.takes++;
+    toMirror(); return;
+  }
+  if(!S.recording){ await startRec(); } else { stopRec(); }
+}
+
+async function startRec(){
+  // mic + MediaRecorder
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    chunks=[];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e=>{ if(e.data.size>0) chunks.push(e.data); };
+    mediaRecorder.onstop = ()=>{
+      if(chunks.length){ S.audioBlob = new Blob(chunks,{type:mediaRecorder.mimeType||'audio/webm'}); S.audioURL = URL.createObjectURL(S.audioBlob); }
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    mediaRecorder.start();
+  }catch(err){
+    alert("Microphone not available here — switching to typing mode.");
+    if(!S.typedMode) toggleTyped();
+    return;
+  }
+  // speech recognition (live transcript)
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  S.transcript="";
+  if(SR){
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-IN';
+    let finalT="";
+    recognition.onresult = (e)=>{
+      let interim="";
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal) finalT += e.results[i][0].transcript + " ";
+        else interim += e.results[i][0].transcript;
+      }
+      S.transcript = (finalT+interim).trim();
+      const tb=document.getElementById('transcriptBox');
+      tb.textContent = S.transcript || "Listening…";
+      tb.classList.remove('empty');
+      tb.scrollTop = tb.scrollHeight;
+    };
+    recognition.onerror = ()=>{};
+    try{ recognition.start(); }catch(e){}
+  } else {
+    document.getElementById('transcriptBox').textContent="(Live transcription isn't supported in this browser — your voice is still being recorded. You can also use 'Type instead'.)";
+  }
+  S.recording=true; S.startTime=Date.now();
+  document.getElementById('recRing').classList.add('rec');
+  document.getElementById('recIcon').textContent="🔴";
+  document.getElementById('recBtn').textContent="I'm done — stop";
+  timerInt = setInterval(()=>{
+    const s=Math.floor((Date.now()-S.startTime)/1000);
+    document.getElementById('recStatus').innerHTML='Speaking… <span class="timer">'+String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')+'</span><br>Take your time.';
+  },500);
+}
+
+function stopRec(){
+  clearInterval(timerInt);
+  S.duration = Math.round((Date.now()-S.startTime)/1000);
+  if(recognition){ try{recognition.stop();}catch(e){} }
+  if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  S.recording=false; S.takes++;
+  document.getElementById('recRing').classList.remove('rec');
+  // give SR a beat to flush final results, MediaRecorder to assemble blob
+  setTimeout(()=>{
+    if(!S.transcript || S.transcript.length<5){
+      // no transcript captured — fall back to typed confirmation
+      const typed = prompt("I couldn't catch the words clearly. Type a line or two about what you said:");
+      if(typed && typed.trim().length>4){ S.transcript = typed.trim(); toMirror(); }
+      else { resetRecorder(); }
+    } else { toMirror(); }
+  },700);
+}
+
+/* ================= mirror ================= */
+function toMirror(){
+  // capture the named listener (rehearse mode)
+  if(S.mode==='rehearse'){
+    const li=document.getElementById('listenerInput');
+    if(li) S.listener=(li.value||"").trim();
+  } else { S.listener=""; }
+  // set Mirror 2 heading to match mode
+  const m2h=document.getElementById('mirror2Heading');
+  if(m2h){
+    m2h.textContent = (S.mode==='rehearse' && S.listener)
+      ? `How it would land on ${S.listener}`
+      : (S.mode==='rehearse' ? "How it would land on your listener" : "How it lands on a fair listener");
+  }
+  go('mirror');
+  document.getElementById('transcriptEcho').textContent = '"'+S.transcript+'"';
+  const audio=document.getElementById('selfAudio');
+  if(S.audioURL){ audio.src=S.audioURL; audio.style.display='block'; document.getElementById('noAudioNote').style.display='none'; }
+  else { audio.style.display='none'; document.getElementById('noAudioNote').style.display='block'; }
+  document.getElementById('analysisLoading').style.display='flex';
+  document.getElementById('listenerBlock').style.display='none';
+  document.getElementById('decideCard').style.display='none';
+  // compute prosody from the captured audio first (Tier 2), then run AI analysis
+  computeProsody().then(analyze).catch(analyze);
+}
+
+/* ================= Tier 2: prosodic analysis (Web Audio, local) =================
+   Computes pitch, pitch variability, energy/loudness, speech rate and pause ratio
+   from the recorded blob — no ML model, no data leaves the device. */
+async function computeProsody(){
+  S.prosody=null;
+  if(!S.audioBlob){ return; }
+  try{
+    const arrayBuf = await S.audioBlob.arrayBuffer();
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ac = new Ctx();
+    const audioBuf = await ac.decodeAudioData(arrayBuf);
+    const sr = audioBuf.sampleRate;
+    const data = audioBuf.getChannelData(0);
+    const N = data.length;
+
+    // ---- frame setup ----
+    const frameMs=40, hopMs=20;
+    const frame=Math.floor(sr*frameMs/1000), hop=Math.floor(sr*hopMs/1000);
+    const energies=[], pitches=[];
+    let maxE=0;
+
+    for(let i=0;i+frame<N;i+=hop){
+      // RMS energy
+      let sum=0;
+      for(let j=0;j<frame;j++){ const s=data[i+j]; sum+=s*s; }
+      const rms=Math.sqrt(sum/frame);
+      energies.push(rms); if(rms>maxE) maxE=rms;
+
+      // pitch via autocorrelation (only on voiced-ish frames)
+      if(rms>0.012){
+        const p=autoCorrPitch(data,i,frame,sr);
+        if(p>=75 && p<=400) pitches.push(p); // human speech range
+      }
+    }
+    if(!energies.length){ ac.close(); return; }
+
+    // ---- speech vs silence (pause ratio) ----
+    const thr=maxE*0.18;
+    let voiced=0; energies.forEach(e=>{ if(e>thr) voiced++; });
+    const pauseRatio = 1 - voiced/energies.length;
+
+    // ---- energy stats ----
+    const meanE = energies.reduce((a,b)=>a+b,0)/energies.length;
+    const energyDb = 20*Math.log10(meanE+1e-6); // rough, relative
+
+    // ---- pitch stats ----
+    let meanP=null, pitchCV=null;
+    if(pitches.length>4){
+      meanP = pitches.reduce((a,b)=>a+b,0)/pitches.length;
+      const variance = pitches.reduce((a,b)=>a+(b-meanP)*(b-meanP),0)/pitches.length;
+      pitchCV = Math.sqrt(variance)/meanP; // coefficient of variation = expressiveness
+    }
+
+    // ---- speech rate (words per minute from transcript + duration) ----
+    const words = S.transcript ? S.transcript.trim().split(/\s+/).filter(Boolean).length : 0;
+    const dur = audioBuf.duration || S.duration || 0;
+    const wpm = dur>0 ? Math.round(words/(dur/60)) : null;
+
+    ac.close();
+
+    // ---- interpret into plain-language descriptors ----
+    const pace = wpm==null ? "unknown" : wpm>170?"fast":wpm<110?"slow":"steady";
+    const loudness = energyDb> -22 ? "loud" : energyDb< -34 ? "quiet" : "moderate";
+    const expressive = pitchCV==null ? "unknown" : pitchCV>0.22?"highly variable":pitchCV<0.10?"flat / monotone":"moderate";
+    const pausing = pauseRatio>0.45?"many pauses":pauseRatio<0.18?"few pauses (rushed)":"natural pausing";
+
+    // ---- a crude voice-arousal index 0..1 from fast+loud+variable, low for slow+quiet+flat ----
+    let arousal=0.5;
+    if(pace==="fast")arousal+=0.18; if(pace==="slow")arousal-=0.18;
+    if(loudness==="loud")arousal+=0.15; if(loudness==="quiet")arousal-=0.15;
+    if(expressive==="highly variable")arousal+=0.12; if(expressive==="flat / monotone")arousal-=0.2;
+    if(pausing==="few pauses (rushed)")arousal+=0.1;
+    arousal=Math.max(0,Math.min(1,arousal));
+
+    S.prosody={ meanPitch:meanP?Math.round(meanP):null, pitchCV:pitchCV?+pitchCV.toFixed(2):null,
+      energyDb:+energyDb.toFixed(1), pauseRatio:+pauseRatio.toFixed(2), wpm,
+      pace, loudness, expressive, pausing, voiceArousal:+arousal.toFixed(2) };
+  }catch(err){
+    S.prosody=null; // decode can fail on some webm; degrade gracefully to transcript-only
+  }
+}
+
+// autocorrelation pitch estimate for one frame
+function autoCorrPitch(buf, start, size, sr){
+  const minLag=Math.floor(sr/400), maxLag=Math.floor(sr/75);
+  let bestLag=-1, bestCorr=0;
+  for(let lag=minLag; lag<=maxLag; lag++){
+    let corr=0;
+    for(let j=0;j<size-lag;j++){ corr += buf[start+j]*buf[start+j+lag]; }
+    if(corr>bestCorr){ bestCorr=corr; bestLag=lag; }
+  }
+  return bestLag>0 ? sr/bestLag : 0;
+}
+
+function speakNeutral(){
+  if(!TTS){ alert("Voice playback isn't supported in this browser. You can still read your words above slowly, in your own calm voice."); return; }
+  try{
+    TTS.cancel();
+    const u = new SpeechSynthesisUtterance(S.transcript);
+    u.rate = 0.95; u.pitch = 1.0;
+    const voices = TTS.getVoices();
+    const v = voices.find(v=>/en[-_](IN|GB)/i.test(v.lang)) || voices.find(v=>/^en/i.test(v.lang));
+    if(v) u.voice=v;
+    TTS.speak(u);
+  }catch(e){ alert("Couldn't play the voice here, but your words are shown above."); }
+}
+
+/* ================= AI analysis ================= */
+async function analyze(){
+  const wpm = (S.prosody&&S.prosody.wpm) || (S.duration>0 ? Math.round(S.transcript.split(/\s+/).length/(S.duration/60)) : null);
+  const hist = S.journal.slice(-3).map(e=>({
+    when:e.when.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),
+    topic:e.topic||"", emotions:(e.emotions||[]).map(x=>x.name).join(", "), intensity:e.intensity
+  }));
+  const histStr = hist.length ? JSON.stringify(hist) : "none — this is the user's first saved moment";
+  const prosodyStr = S.prosody
+    ? `VOICE (how it sounded, measured from the audio): pace ${S.prosody.pace}${S.prosody.wpm?` (${S.prosody.wpm} wpm)`:''}, loudness ${S.prosody.loudness}, pitch ${S.prosody.expressive}, ${S.prosody.pausing}, voice-arousal ${S.prosody.voiceArousal} (0=calm,1=very activated).`
+    : "VOICE: not available (typed input or audio couldn't be analysed) — judge from words only.";
+  const modeStr = S.mode==='rehearse'
+    ? `MODE: REHEARSAL (the user is calm and PREPARING for a future situation, not in crisis). They will deliver this to a specific listener${S.listener?`: "${S.listener}"`:" (unspecified)"}. Your job is relationship-aware coaching: in listener_takeaway and listener_response, reflect how THIS specific listener${S.listener?` (${S.listener})`:''} would likely receive it given that relationship, and what would help the message land better. Be constructive and specific. Tone: a supportive coach, not a crisis responder.`
+    : `MODE: BURST (the user is IN an emotional moment right now and needs to regulate). Do NOT optimise the message for any specific person. Give the view of one fair, neutral, reasonable listener — just enough outside perspective to loosen the grip of "my version is the only version". Priority is calming and fair perspective, not message-tuning. Tone: warm, steadying.`;
+  const prompt = `You are the listener-perspective engine inside EmoNav, a self-reflection app used by people aged 11 and up. The user just spoke the message below. Your job is to be the honest, unbiased mirror a friend cannot be: warm, but truthful — including about how the user COMES ACROSS, not just what they said.
+
+${modeStr}
+
+User's spoken words: """${S.transcript}"""
+Speaking duration: ${S.duration||"unknown"} seconds. Words per minute: ${wpm||"unknown"}. Take number: ${S.takes}.
+${prosodyStr}
+CULTURAL CONTEXT — the user is most likely Indian. Read accordingly:
+- Indians often express distress through the BODY or SITUATION, not feeling-words: "my head is heavy", "couldn't eat", "tension ho raha hai", "feeling restless". Treat somatic and situational language as PRIMARY emotional signal, never as absence of emotion.
+- Emotion is often carried in RELATIONAL/duty terms: "what will people say", "log kya kahenge", "don't want to disappoint my parents", "it's my responsibility", "adjustment", "compromise". These are emotionally heavy — read the feeling underneath them.
+- Accept Hinglish / code-mixing naturally ("bahut frustrated", "thak gaya", "bohot bura lag raha hai") — read mixed-language input as normal, not noise.
+- Calibrate intensity to UNDERSTATEMENT norms: from someone who rarely complains, "a little disturbed" may be a 7, not a 3. Don't under-rate quietly-stated pain.
+- Do NOT require Western-style "I feel X" naming. Absence of a feeling-word is not absence of feeling.
+IMPORTANT: Compare the WORDS with the VOICE. If the words sound calm/fine but the voice is activated (fast, loud, variable), or the words sound dramatic but the voice is flat/quiet, that mismatch is meaningful — surface it in "voice_mismatch". If voice data is unavailable, set voice_mismatch to "".
+User's recent saved moments (for continuity): ${histStr}
+
+Respond with ONLY a valid JSON object, no markdown fences, no preamble, with exactly these keys:
+{
+ "voice_mismatch": "If words and voice disagree, 1-2 sentences naming it kindly, e.g. 'Your words say you're fine, but your voice is fast and tight — the feeling is bigger than you're letting on.' Empty string if they match or no voice data.",
+ "perception": "2-3 honest but kind sentences in second person describing how the SPEAKER comes across to a listener — their state and manner, not their content. Examples of the register: 'You sound under pressure and not fully clear on what you actually want to say.' / 'You come across as venting about this person's regular way of being, more than asking for anything.' / 'You sound like you are spiralling — the listener would feel your panic before your point.'",
+ "perception_tags": ["under pressure","not clear on the ask"],
+ "mirror_face": "😟",
+ "clarity": {"score": 45, "verdict": "scattered", "note": "1-2 sentences: is the message to the point, making sense, and complete — or half information, jumping between things, missing key context? Name exactly what is missing or jumbled, e.g. 'You name the problem but never say what you want to happen.'"},
+ "topic": "3-6 word label of what or who this is about",
+ "continuity": {"repeat": false, "note": ""},
+ "listener_takeaway": "2-3 sentences: what a neutral listener would genuinely understand from this message — the core point beneath the emotion, in second person ('You are saying that...')",
+ "listener_response": "1-2 sentences: how a typical listener would likely feel hearing this and how they would probably respond",
+ "emotions": [{"name":"Anger","rasa":"Krodha","pct":60},{"name":"Hurt","rasa":"Shoka","pct":40}],
+ "felt_sense": "One gentle, tentative sentence naming the emotion as a guess to be checked, not a verdict — e.g. 'This sounds mostly like anger, with some hurt underneath.' Use 'sounds like / seems like', never 'you are'. Plain words an 11-year-old knows.",
+ "vocab_offer": "If the user used only vague/loose words for their feeling ('weird','bad','off','not good','strange'), offer 2-3 gentle MORE PRECISE shades to choose from, in second person, without correcting them — e.g. 'That \\'weird and bad\\' feeling — sometimes it sits closer to worried, sometimes closer to lonely, sometimes just tired. Does one of those fit, or is it its own thing?' If the user already named the feeling clearly, return empty string.",
+ "intensity": 7,
+ "confidence": 55,
+ "reframe": "2 sentences offering one steadier, fairer way to look at this exact situation — not dismissive, not toxic positivity, genuinely useful perspective",
+ "positive_note": "1-2 sentences of genuine, specific encouragement grounded in something real the user did or said (e.g., choosing to pause and reflect instead of reacting)",
+ "calming_seconds": [4,2,6],
+ "crisis": false,
+ "force_regulate": false
+}
+SAFETY OVERRIDE (applies in BOTH modes, ignore the mode if triggered): If the message shows real distress, self-harm, harm to others, abuse, or acute danger, set "crisis" to true. Additionally, even in REHEARSAL mode, if what actually comes out is raw emotional pain rather than calm preparation, set "force_regulate" to true and switch your tone to warm regulation — do NOT give performance/coaching tips to someone who is actually hurting. Distress always overrides the selected mode.
+Rules: perception_tags has 2-4 short tags (2-4 words each). mirror_face is ONE emoji that mirrors how the speaker comes across (😤 😟 😢 😣 😰 😶 🙂 etc.). clarity.score 0-100; clarity.verdict is exactly one of "to the point" | "partly clear" | "scattered". continuity: compare with the recent moments provided — set repeat to true if this is the same feeling, same topic, or same person as a recent moment, and write note like "This is the third time about the same colleague — the feeling is the same, the situation hasn't moved." If history is none or unrelated, repeat false and note "". emotions array has 1-3 items, pct sums to ~100, rasa uses Natyashastra terms (Krodha, Shoka, Bhaya, Raudra, Vira, Shanta, Hasya, Adbhuta, Bibhatsa or 'Mixed'). intensity 1-10. confidence 0-100 based on hedging, absolutist words, completeness of thoughts, pacing. calming_seconds = [inhale, hold, exhale] suited to the intensity (higher intensity = longer exhale). Set crisis to true ONLY if the message suggests self-harm, harm to others, abuse, or acute danger. Use simple language an 11-year-old could understand if the message sounds like a young person wrote it.`;
+
+  try{
+    const res = await fetch("/api/analyze",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({prompt})
+    });
+    if(!res.ok){
+      let why="API returned "+res.status;
+      try{ const e=await res.json(); if(e&&e.error) why=e.error+(e.detail?" — "+e.detail:(e.reason?" ("+e.reason+")":"")); }catch(_){}
+      throw new Error(why);
+    }
+    const data = await res.json();
+    let txt = (data && data.text) ? String(data.text).trim() : "";
+    if(!txt) throw new Error("Empty response from analysis service");
+    // robust JSON extraction: take the first { ... last }
+    const a0=txt.indexOf("{"), a1=txt.lastIndexOf("}");
+    if(a0===-1||a1===-1) throw new Error("No JSON found in AI response");
+    S.analysis = JSON.parse(txt.slice(a0,a1+1));
+    S.analysisFallback = false;
+  }catch(err){
+    S.analysisFallback = true;
+    S.analysisError = err.message || String(err);
+    // graceful local fallback
+    S.analysis = {
+      voice_mismatch:"",
+      perception:"You sound like you have something real to say, but the feeling is arriving before the point. A listener would sense your agitation first.",
+      perception_tags:["emotion before point","needs one more pass"],
+      mirror_face:"😟",
+      clarity:{score:50,verdict:"partly clear",note:"The feeling is clear, but what you actually want to happen next isn't said yet."},
+      topic:"Unlabelled moment",
+      continuity:{repeat:false,note:""},
+      listener_takeaway:"You are expressing that something has upset you and you need it acknowledged. The core message is clear even through the emotion.",
+      listener_response:"A listener would sense your frustration and most likely want to hear more before responding.",
+      emotions:[{name:"Mixed feelings",rasa:"Mixed",pct:100}],
+      felt_sense:"This sounds like a mix of feelings — see if you can tell which one is loudest right now.",
+      vocab_offer:"",
+      intensity:5, confidence:50,
+      reframe:"Strong feelings are information, not instructions. You can honour what you feel and still choose your next step calmly.",
+      positive_note:"You paused to reflect instead of reacting — that is exactly the skill this practice builds.",
+      calming_seconds:[4,2,6], crisis:false, force_regulate:false
+    };
+  }
+  renderAnalysis();
+}
+
+function renderAnalysis(){
+  const a=S.analysis;
+  document.getElementById('analysisLoading').style.display='none';
+  document.getElementById('listenerBlock').style.display='block';
+  document.getElementById('decideCard').style.display='block';
+  // safety: if rehearsal surfaced real pain, drop the rehearsal framing and switch to regulation
+  if(a.force_regulate && S.mode==='rehearse'){
+    S.mode='burst'; S.listener="";
+    const m2h=document.getElementById('mirror2Heading'); if(m2h) m2h.textContent="How it lands on a fair listener";
+    const fw2=document.getElementById('fallbackWarn');
+    fw2.style.display='block';
+    fw2.style.background="#EAF3F0"; fw2.style.borderColor="#CFE5DD"; fw2.style.color="#1E4A43";
+    fw2.innerHTML="🌿 <b>Let's pause the rehearsal.</b> What you're feeling right now sounds real and worth tending to first. Let's settle that before practising anything.";
+  }
+  // fallback visibility (only if not already showing the regulate note)
+  const fw=document.getElementById('fallbackWarn');
+  if(S.analysisFallback && !(a.force_regulate && S.mode==='burst')){
+    fw.style.display='block';
+    fw.style.background="#FDF1F0"; fw.style.borderColor="#F2D7D5"; fw.style.color="#9C4640";
+    fw.innerHTML="⚠️ <b>AI analysis didn't run</b> — you're seeing a generic reflection, not a reading of your words.<br><span style='font-size:12px'>Reason: "+(S.analysisError||"unknown")+". Check that GEMINI_API_KEY is set in Cloudflare and the /api/analyze function deployed.</span>";
+  } else if(!a.force_regulate){ fw.style.display='none'; }
+  // perception mirror
+  document.getElementById('mirrorFace').textContent = a.mirror_face || "😶";
+  document.getElementById('perceptionText').textContent = a.perception || "";
+  document.getElementById('perceptionTags').innerHTML =
+    (a.perception_tags||[]).map(t=>`<span class="tag">${t}</span>`).join("");
+  // clarity verdict
+  const chip=document.getElementById('clarityChip');
+  const v=(a.clarity&&a.clarity.verdict)||"partly clear";
+  chip.textContent = v + (a.clarity&&a.clarity.score!=null ? " · "+a.clarity.score+"%" : "");
+  chip.className = "vchip " + (v==="to the point"?"v-clear":v==="scattered"?"v-scattered":"v-partial");
+  document.getElementById('clarityText').textContent = (a.clarity&&a.clarity.note)||"";
+  // continuity
+  const cn=document.getElementById('continuityNote');
+  if(a.continuity && a.continuity.repeat && a.continuity.note){
+    cn.style.display='block';
+    cn.innerHTML = "🔁 <b>Pattern noticed:</b> " + a.continuity.note;
+  } else { cn.style.display='none'; }
+  // content takeaway
+  document.getElementById('takeawayText').textContent=a.listener_takeaway;
+  document.getElementById('responseText').textContent=a.listener_response;
+  // voice mismatch (word vs voice)
+  const vm=document.getElementById('voiceMismatch');
+  if(a.voice_mismatch && a.voice_mismatch.trim()){
+    vm.style.display='block';
+    vm.innerHTML="🎭 <b>Your words and your voice don't quite match:</b> "+a.voice_mismatch;
+  } else { vm.style.display='none'; }
+  // voice readout strip
+  const vr=document.getElementById('voiceReadout');
+  if(S.prosody){
+    vr.style.display='block';
+    const p=S.prosody;
+    const tags=[
+      `🏃 pace: ${p.pace}${p.wpm?` · ${p.wpm} wpm`:''}`,
+      `🔊 loudness: ${p.loudness}`,
+      `🎵 pitch: ${p.expressive}`,
+      `⏸️ ${p.pausing}`,
+      `⚡ voice arousal: ${Math.round(p.voiceArousal*100)}%`
+    ];
+    document.getElementById('voiceTags').innerHTML = tags.map(t=>`<span class="tag">${t}</span>`).join("");
+  } else { vr.style.display='none'; }
+  if(a.crisis){ document.getElementById('crisisOverlay').classList.add('show'); }
+}
+function closeCrisis(){ document.getElementById('crisisOverlay').classList.remove('show'); }
+
+/* ================= emotion -> technique library ================= */
+// rasa families. Each emotion maps to a family; family decides which techniques appear.
+const RASA_FAMILY = {
+  Krodha:"anger", Raudra:"anger",
+  Bhaya:"fear",
+  Shoka:"sadness", Karuna:"sadness",
+  Bibhatsa:"overwhelm",
+  // fallbacks for plain-English names the model may use
+  Anger:"anger", Frustration:"anger", Irritation:"anger",
+  Fear:"fear", Anxiety:"fear", Worry:"fear", Nervous:"fear", Panic:"overwhelm",
+  Sadness:"sadness", Hurt:"sadness", Grief:"sadness", Crying:"sadness", Loneliness:"lonely", Lonely:"lonely", Alone:"lonely",
+  Overwhelm:"overwhelm", Overwhelmed:"overwhelm"
+};
+
+const TECHNIQUES = {
+  anger:{
+    label:"anger", intro:"Anger is heat and energy. The aim isn't to crush it — it's to cool the body so you can use what the anger is telling you.",
+    items:[
+      {icon:"🌬️", title:"Long-exhale breathing", fast:true, hint:"The one breath pattern that directly calms the fight response — breathe out twice as long as you breathe in.",
+       steps:[["Breathe in",4],["Breathe out slowly",8],["Again — in",4],["Out, longer",8],["One more — in",4],["Out, let the jaw soften",8],["Notice the heat dropping",0]]},
+      {icon:"✊", title:"Discharge the surge", fast:true, hint:"Anger needs somewhere to go. Move it out of the body safely.",
+       steps:[["Press both palms hard against a wall, push for 5 seconds",0],["Release. Feel the hands go heavy",0],["Clench both fists tight… then slowly open them",0],["Roll the shoulders back and down",0],["Notice: the body has somewhere to put it now",0]]},
+      {icon:"💧", title:"Cool down", fast:true, hint:"Cold on the skin physically lowers the arousal spike.",
+       steps:[["Run cool water over your wrists, or splash your face",0],["Hold it for 15–20 seconds",0],["Take one slow breath while you feel the cool",0],["Notice the difference in your chest and face",0]]},
+      {icon:"🎯", title:"Name what's underneath", hint:"Anger almost always sits on top of an unmet need. Finding it is where the calm and the clarity meet.",
+       steps:[["Anger is the signal, not the message. What is it protecting?",0],["Finish this: \"I feel angry because I needed ____ and didn't get it.\"",0],["Common ones: to be respected, to be heard, to be treated fairly, to feel safe",0],["Now you know the real thing to ask for — calmly",0]]}
+    ]
+  },
+  fear:{
+    label:"fear or anxiety", intro:"Fear makes the mind race to the future. These pull you back to the present, where you're actually safe right now.",
+    items:[
+      {icon:"🖐️", title:"5–4–3–2–1 grounding", fast:true, hint:"The strongest tool for anxiety — it crowds out the racing thoughts with your senses.",
+       steps:[["Look around: name 5 things you can SEE",0],["Notice 4 things you can HEAR",0],["Find 3 things you can TOUCH — feel them",0],["Notice 2 things you can SMELL",0],["1 thing you can TASTE",0],["You're here. You're in this room. You're okay right now.",0]]},
+      {icon:"⬜", title:"Box breathing", fast:true, hint:"Equal, even breaths tell the body the threat has passed.",
+       steps:[["Breathe in",4],["Hold gently",4],["Breathe out",4],["Hold",4],["Again — in",4],["Hold",4],["Out",4],["Hold, soft",4],["Steady. The body is catching up to safety.",0]]},
+      {icon:"🦶", title:"Anchor to now", hint:"Separate what's happening from what you're afraid will happen.",
+       steps:[["Put both feet flat on the floor. Press down a little.",0],["Say in your mind: \"I am here. It is today. I am safe right now.\"",0],["Name the fear out loud: \"I'm afraid that ____\"",0],["Now ask: \"Is that happening right now, this second? Or is it a 'what if'?\"",0],["Most fear lives in the future. You only have to handle now.",0]]}
+    ]
+  },
+  sadness:{
+    label:"sadness", intro:"Sadness doesn't need fixing — it needs space and kindness. Don't push it away; let it move through you.",
+    items:[
+      {icon:"🫶", title:"Let it move", fast:true, hint:"Holding tears in keeps the feeling stuck. Giving it a little time helps it pass.",
+       steps:[["Put a hand on your heart, the way you would for a friend",0],["Let yourself feel it fully for the next two minutes — that's allowed",0],["Breathe gently. No need to stop the tears.",0],["Say softly: \"This hurts, and it makes sense that it does.\"",0],["Feelings that are felt fully tend to soften on their own",0]]},
+      {icon:"🧣", title:"Comfort the body", hint:"Sadness eases with warmth and gentleness, not pressure.",
+       steps:[["Wrap something warm around you, or hold a cushion close",0],["Slow your breathing — long and soft, no counting needed",0],["Place a hand on your cheek or arm. Warmth signals safety.",0],["You don't have to do anything right now except be kind to yourself",0]]},
+      {icon:"🗣️", title:"Speak to yourself as a friend", hint:"We're far harsher to ourselves than we'd ever be to someone we love.",
+       steps:[["Picture a friend feeling exactly what you feel now",0],["What would you say to them? Say it — out loud if you can.",0],["Now turn those same words toward yourself",0],["You deserve the same gentleness you'd give anyone else",0]]}
+    ]
+  },
+  lonely:{
+    label:"loneliness", intro:"Loneliness isn't solved by calming down — it's eased by connection and by being gentle with the story you're telling yourself.",
+    items:[
+      {icon:"💬", title:"One small reach", fast:true, hint:"Connection doesn't need to be big. One message to one person counts.",
+       steps:[["Think of one person — anyone — you could send a simple message to",0],["It doesn't need a reason. \"Thinking of you\" is enough.",0],["Reaching out isn't weakness — it's how humans are built to work",0],["Send it. Then notice you took a step toward people, not away.",0]]},
+      {icon:"🌍", title:"Step toward the world", hint:"Being alone and feeling lonely aren't the same. Gentle contact with life helps.",
+       steps:[["Step outside, or to a window — somewhere you can see other people or sky",0],["Or put on music, or sit with a pet — anything that says 'I'm part of something'",0],["Notice you share this moment with millions feeling exactly the same",0],["The lonely feeling is real, but the story 'I'm truly alone' usually isn't",0]]},
+      {icon:"🪞", title:"Soften the story", hint:"Loneliness whispers 'something is wrong with me.' That voice isn't telling the truth.",
+       steps:[["Notice the thought loneliness brings — often \"no one cares\" or \"it's me\"",0],["That's the feeling talking, not the facts",0],["Name one person, however far, who is glad you exist",0],["Feeling lonely is human and temporary — it is not proof of anything about your worth",0]]}
+    ]
+  },
+  overwhelm:{
+    label:"overwhelm", intro:"Too much is hitting at once. The aim is to drop the body's alarm fast, then shrink everything down to just the next minute.",
+    items:[
+      {icon:"❄️", title:"Reset with cold", fast:true, hint:"Cold on the face triggers a reflex that slows the heart quickly.",
+       steps:[["Hold something cold, or splash cold water on your face",0],["Breathe out slowly while you feel the cold",0],["Let the shoulders drop",0],["Notice the system starting to settle",0]]},
+      {icon:"🌬️", title:"Long-exhale breathing", fast:true, hint:"Slow the out-breath to switch off the alarm.",
+       steps:[["Breathe in",4],["Long breath out",8],["In",4],["Longer out",8],["In",4],["Out, fully",8],["A little more space now",0]]},
+      {icon:"1️⃣", title:"Shrink the field", hint:"You don't have to handle all of it. Only the next piece.",
+       steps:[["Stop trying to see the whole mountain",0],["Ask: \"What is the ONE next thing — just the next minute?\"",0],["Everything else can wait. Genuinely.",0],["Do only that one thing. Then ask again.",0]]}
+    ]
+  }
+};
+
+function pickFamily(a){
+  const list=(a.emotions||[]);
+  for(const e of list){ if(RASA_FAMILY[e.rasa]) return RASA_FAMILY[e.rasa]; if(RASA_FAMILY[e.name]) return RASA_FAMILY[e.name]; }
+  return "overwhelm";
+}
+
+/* ================= finalize -> calm ================= */
+function finalize(){
+  ttsCancel();
+  const a=S.analysis;
+  S.userRelabel=null;
+  go('calm');
+  // felt sense (tentative phrasing) + reset fit/relabel UI
+  document.getElementById('feltSense').textContent = a.felt_sense || "This sounds like a mix of feelings.";
+  const vo=document.getElementById('vocabOffer');
+  if(a.vocab_offer && a.vocab_offer.trim()){ vo.style.display='block'; vo.innerHTML="🫧 "+a.vocab_offer; }
+  else { vo.style.display='none'; }
+  document.getElementById('relabelBox').style.display='none';
+  document.getElementById('fitYes').textContent="Yes, that fits";
+  document.getElementById('fitYes').style.borderColor="";
+  document.getElementById('relabelOther').value="";
+  // scores
+  const eb=document.getElementById('emoBars'); eb.innerHTML="";
+  (a.emotions||[]).forEach(e=>{
+    eb.insertAdjacentHTML('beforeend',
+     `<div class="emobar"><div class="name">${e.name}<br><span class="muted" style="font-size:11px">${e.rasa}</span></div>
+      <div class="bar"><i style="width:${e.pct}%"></i></div><div class="pct">${e.pct}%</div></div>`);
+  });
+  document.getElementById('confPct').textContent=a.confidence+"%";
+  document.getElementById('confMeter').style.width=a.confidence+"%";
+  document.getElementById('intenseLbl').textContent=a.intensity+" / 10";
+  document.getElementById('intenseMeter').style.width=(a.intensity*10)+"%";
+  document.getElementById('reframeText').textContent=a.reframe;
+  document.getElementById('positiveText').textContent="🌿 "+a.positive_note;
+  document.getElementById('takesNote').textContent = S.takes>1
+    ? `You took ${S.takes} takes to get to a version you're happy with — re-recording IS the practice.`
+    : `You said it in one take. Notice how it felt to hear yourself.`;
+  // emotion-aware technique menu
+  buildTechMenu();
+}
+
+/* ================= emotion confirm / relabel ================= */
+const RELABEL_OPTIONS = [
+  {name:"Angry",rasa:"Krodha"},{name:"Hurt",rasa:"Shoka"},{name:"Sad",rasa:"Shoka"},
+  {name:"Afraid",rasa:"Bhaya"},{name:"Anxious / tension",rasa:"Bhaya"},{name:"Lonely",rasa:"Karuna"},
+  {name:"Overwhelmed",rasa:"Bibhatsa"},{name:"Frustrated",rasa:"Krodha"},
+  {name:"Disappointed",rasa:"Shoka"},{name:"Pressured / burdened",rasa:"Bhaya"},
+  {name:"Guilty",rasa:"Shoka"},{name:"Ashamed",rasa:"Shoka"},
+  {name:"Restless",rasa:"Bhaya"},{name:"Heavy / drained",rasa:"Shoka"},
+  {name:"Calm",rasa:"Shanta"},{name:"Confused",rasa:"Mixed"}
+];
+function confirmEmotion(fits){
+  const y=document.getElementById('fitYes');
+  y.textContent="✓ Confirmed"; y.style.borderColor="var(--teal)";
+  document.getElementById('relabelBox').style.display='none';
+  S.userRelabel=null; // user agreed with the app's read
+}
+function openRelabel(){
+  const box=document.getElementById('relabelBox');
+  const chips=document.getElementById('relabelChips');
+  chips.innerHTML = RELABEL_OPTIONS.map((o,i)=>
+    `<button class="tag" style="cursor:pointer;border:1px solid #ECD8B8" onclick="pickRelabel(${i},this)">${o.name}</button>`).join("");
+  box.style.display='block';
+  document.getElementById('fitYes').textContent="Yes, that fits";
+  document.getElementById('fitYes').style.borderColor="";
+}
+let relabelPick=null;
+function pickRelabel(i,el){
+  relabelPick=RELABEL_OPTIONS[i];
+  document.querySelectorAll('#relabelChips .tag').forEach(t=>t.style.background="#F6EBDD");
+  el.style.background="#DCEAE6";
+  document.getElementById('relabelOther').value="";
+}
+function saveRelabel(){
+  const typed=document.getElementById('relabelOther').value.trim();
+  if(typed){ S.userRelabel={name:typed,rasa:"(your word)"}; }
+  else if(relabelPick){ S.userRelabel=relabelPick; }
+  else { alert("Pick a feeling or type one first."); return; }
+  // reflect the user's correction as the leading emotion, rebuild techniques around it
+  S.analysis.emotions = [{name:S.userRelabel.name, rasa:S.userRelabel.rasa, pct:100}];
+  document.getElementById('feltSense').textContent = `You named it: ${S.userRelabel.name}. That's the one that counts.`;
+  document.getElementById('relabelBox').style.display='none';
+  // refresh emotion bars + technique menu to match the user's own label
+  const eb=document.getElementById('emoBars'); eb.innerHTML=
+    `<div class="emobar"><div class="name">${S.userRelabel.name}<br><span class="muted" style="font-size:11px">${S.userRelabel.rasa}</span></div>
+     <div class="bar"><i style="width:100%"></i></div><div class="pct">✓</div></div>`;
+  buildTechMenu();
+  relabelPick=null;
+}
+function noWord(){
+  S.userRelabel={name:"No word yet",rasa:"unnamed"};
+  document.getElementById('feltSense').textContent = "That's okay — not every feeling has a word yet. Noticing it without naming it is enough for now.";
+  document.getElementById('vocabOffer').style.display='none';
+  document.getElementById('relabelBox').style.display='none';
+  document.getElementById('emoBars').innerHTML=
+    `<div class="emobar"><div class="name">An unnamed feeling<br><span class="muted" style="font-size:11px">honoured as it is</span></div>
+     <div class="bar"><i style="width:100%;background:#C9B8E0"></i></div><div class="pct">🫧</div></div>`;
+  // keep whatever calming techniques were already shown; the feeling needn't be named to settle it
+  relabelPick=null;
+}
+
+function buildTechMenu(){
+  const a=S.analysis;
+  const fam=pickFamily(a);
+  S.family=fam;
+  const set=TECHNIQUES[fam];
+  const high=(a.intensity||5)>=7;
+  document.getElementById('emoName').textContent=set.label;
+  document.getElementById('calmSub').innerHTML=`Your words show <b>${set.label}</b>. Here's what helps with that.`;
+  document.getElementById('techIntro').textContent=set.intro;
+  document.getElementById('techEyebrow').textContent = high ? "Start here — your intensity is high" : "Choose what feels right";
+  // order: when intensity high, fast body-based first; else reflective first
+  const items=[...set.items].map((it,i)=>({it,i}));
+  items.sort((x,y)=> high ? (Number(!!y.it.fast)-Number(!!x.it.fast)) : (Number(!!x.it.fast)-Number(!!y.it.fast)));
+  const menu=document.getElementById('techMenu'); menu.innerHTML="";
+  items.forEach(({it,i})=>{
+    menu.insertAdjacentHTML('beforeend',
+      `<button class="techitem" onclick="openTechnique('${fam}',${i})">
+        <span class="tic">${it.icon}</span>
+        <span><span class="tt">${it.title}${it.fast?'<span class="fast">fast relief</span>':''}</span>
+        <span class="td">${it.hint}</span></span>
+      </button>`);
+  });
+  document.getElementById('techMenuCard').style.display='block';
+  document.getElementById('techPlayerCard').style.display='none';
+  document.getElementById('breathCore').textContent="🪷";
+  document.getElementById('breathRing').style.transform='scale(1)';
+}
+
+/* ================= technique step player ================= */
+let techState=null, techTimer=null;
+function openTechnique(fam,idx){
+  const t=TECHNIQUES[fam].items[idx];
+  techState={t, step:0};
+  document.getElementById('techMenuCard').style.display='none';
+  document.getElementById('techPlayerCard').style.display='block';
+  document.getElementById('playerTitle').textContent=t.icon+" "+t.title;
+  showStep();
+}
+function showStep(){
+  clearTimeout(techTimer);
+  const {t,step}=techState;
+  const [label,seconds]=t.steps[step];
+  document.getElementById('playerStep').textContent=label;
+  const ring=document.getElementById('breathRing'), core=document.getElementById('breathCore');
+  const last = step>=t.steps.length-1;
+  document.getElementById('playerNext').textContent = last ? "Done ✓" : "Next step →";
+  if(seconds>0){
+    // timed breath step — animate ring + auto-advance
+    core.textContent=seconds+"s";
+    const grow=/in\b/i.test(label);
+    ring.style.transition=`transform ${seconds}s ease-in-out`;
+    ring.style.transform= grow ? 'scale(1.18)' : 'scale(1)';
+    document.getElementById('playerHint').textContent="Follow the circle…";
+    techTimer=setTimeout(()=>{ techNext(); }, seconds*1000);
+  } else {
+    core.textContent="🪷"; ring.style.transform='scale(1.05)';
+    document.getElementById('playerHint').textContent=t.hint;
+  }
+}
+function techNext(){
+  clearTimeout(techTimer);
+  if(techState.step>=techState.t.steps.length-1){ closeTechnique(); return; }
+  techState.step++; showStep();
+}
+function closeTechnique(){
+  clearTimeout(techTimer);
+  document.getElementById('techPlayerCard').style.display='none';
+  document.getElementById('techMenuCard').style.display='block';
+  document.getElementById('breathRing').style.transform='scale(1)';
+  document.getElementById('breathCore').textContent="🪷";
+}
+
+
+/* ================= journal & reports ================= */
+function saveEntry(){
+  const a=S.analysis;
+  S.journal.push({
+    when:new Date(),
+    snippet:S.transcript.slice(0,90)+(S.transcript.length>90?"…":""),
+    emotions:a.emotions, intensity:a.intensity, confidence:a.confidence, takes:S.takes,
+    topic:a.topic||"", clarity:(a.clarity&&a.clarity.score)!=null?a.clarity.score:null,
+    clarityVerdict:(a.clarity&&a.clarity.verdict)||"", repeated:!!(a.continuity&&a.continuity.repeat),
+    voiceArousal:S.prosody?S.prosody.voiceArousal:null, pace:S.prosody?S.prosody.pace:null,
+    voiceMismatch:!!(a.voice_mismatch&&a.voice_mismatch.trim()),
+    userCorrected:!!S.userRelabel,
+    mode:S.mode, listener:S.listener||""
+  });
+  go('journal');
+}
+function discardEntry(){ go('home'); }
+
+function renderJournal(){
+  const list=document.getElementById('journalList');
+  if(!S.journal.length){ list.innerHTML='<p class="muted" style="margin-top:8px">Nothing here yet. Your saved moments will appear here.</p>'; return; }
+  list.innerHTML="";
+  [...S.journal].reverse().forEach(e=>{
+    const pills=(e.emotions||[]).map(x=>`<span class="pill">${x.name} · ${x.rasa}</span>`).join("");
+    list.insertAdjacentHTML('beforeend',
+      `<div class="entry">
+        <div class="when">${e.when.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${e.takes} take${e.takes>1?'s':''} · confidence ${e.confidence}%${e.clarityVerdict?' · '+e.clarityVerdict:''}${e.repeated?' · 🔁 repeat':''}</div>
+        ${e.topic?'<div style="font-size:13px;font-weight:600;margin-top:2px">'+(e.mode==='rehearse'?'🎯 ':'🌊 ')+e.topic+(e.mode==='rehearse'&&e.listener?' → '+e.listener:'')+'</div>':''}
+        <div class="snip">"${e.snippet}"</div>
+        <div>${pills}</div>
+      </div>`);
+  });
+}
+
+function renderReports(){
+  const J=S.journal;
+  document.getElementById('statEntries').textContent=J.length;
+  document.getElementById('statTakes').textContent=J.length?(J.reduce((s,e)=>s+e.takes,0)/J.length).toFixed(1):"–";
+  document.getElementById('statConf').textContent=J.length?Math.round(J.reduce((s,e)=>s+e.confidence,0)/J.length)+"%":"–";
+  const clarVals=J.filter(e=>e.clarity!=null);
+  document.getElementById('statClarity').textContent=clarVals.length?Math.round(clarVals.reduce((s,e)=>s+e.clarity,0)/clarVals.length)+"%":"–";
+  // sparkline
+  const svg=document.getElementById('sparkline'); svg.innerHTML="";
+  if(J.length>=2){
+    const pts=J.map((e,i)=>{
+      const x=10+(i*(280/(J.length-1)));
+      const y=58-(e.confidence/100)*52;
+      return x.toFixed(1)+","+y.toFixed(1);
+    }).join(" ");
+    svg.innerHTML=`<polyline points="${pts}" fill="none" stroke="#2E6E65" stroke-width="2.5" stroke-linecap="round"/>`+
+      J.map((e,i)=>{const x=10+(i*(280/(J.length-1)));const y=58-(e.confidence/100)*52;
+        return `<circle cx="${x}" cy="${y}" r="3.5" fill="#E8A33D"/>`;}).join("");
+  } else {
+    svg.innerHTML=`<text x="10" y="36" font-size="12" fill="#5B6B73">Save at least two moments to see your trend.</text>`;
+  }
+  // emotion distribution
+  const agg={};
+  J.forEach(e=>(e.emotions||[]).forEach(x=>{agg[x.name+"·"+x.rasa]=(agg[x.name+"·"+x.rasa]||0)+x.pct;}));
+  const total=Object.values(agg).reduce((a,b)=>a+b,0);
+  const cont=document.getElementById('reportEmotions');
+  if(total){
+    cont.innerHTML="";
+    Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(([k,v])=>{
+      const [name,rasa]=k.split("·");
+      const pct=Math.round((v/total)*100);
+      cont.insertAdjacentHTML('beforeend',
+        `<div class="emobar"><div class="name">${name}<br><span class="muted" style="font-size:11px">${rasa}</span></div>
+         <div class="bar"><i style="width:${pct}%"></i></div><div class="pct">${pct}%</div></div>`);
+    });
+  }
+  // recurring themes (topics grouped)
+  const themes={};
+  J.forEach(e=>{ if(e.topic){ const k=e.topic.toLowerCase().trim(); themes[k]=themes[k]||{label:e.topic,count:0,repeat:false}; themes[k].count++; if(e.repeated) themes[k].repeat=true; }});
+  const tcont=document.getElementById('reportThemes');
+  const tlist=Object.values(themes).sort((a,b)=>b.count-a.count);
+  if(tlist.length){
+    tcont.innerHTML="";
+    tlist.slice(0,6).forEach(t=>{
+      tcont.insertAdjacentHTML('beforeend',
+        `<div class="emobar"><div style="flex:1;font-size:13.5px">${t.label}${t.repeat?' <span style="font-size:11px">🔁</span>':''}</div>
+         <div class="pct" style="width:auto">${t.count}×</div></div>`);
+    });
+  }
+}
+
+/* warm up TTS voices list (some browsers load async) */
+/* safe TTS helper — speechSynthesis is missing in some mobile webviews */
+const TTS = (typeof window!=='undefined' && 'speechSynthesis' in window) ? window.speechSynthesis : null;
+function ttsCancel(){ try{ if(TTS) TTS.cancel(); }catch(e){} }
+if(TTS){
+  try{
+    TTS.getVoices();
+    if(TTS.onvoiceschanged!==undefined){ TTS.onvoiceschanged=()=>{ try{TTS.getVoices();}catch(e){} }; }
+  }catch(e){}
+}
+</script>
+</body>
 </html>
