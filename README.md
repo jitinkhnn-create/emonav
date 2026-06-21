@@ -1,6 +1,6 @@
 # EmoNav Voice Reflection App
 
-Voice reflection app with:
+Voice  reflection app with:
 
 - Google OAuth authentication
 - Secure session management with Cloudflare KV storage
