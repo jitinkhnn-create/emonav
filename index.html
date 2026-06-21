@@ -18,6 +18,7 @@
     --line:#DDE5E0;
     --danger:#B4524B;
     --radius:18px;
+    --rail:84px;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
@@ -40,6 +41,33 @@
   nav button{flex:1;border:0;background:none;padding:11px 0 13px;font-size:12px;color:var(--ink-soft);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;}
   nav button .ic{font-size:19px;line-height:1;}
   nav button.active{color:var(--teal);font-weight:600;}
+
+  /* ---------- desktop: move nav to a left vertical rail ---------- */
+  @media (min-width:700px){
+    /* shift the whole phone column right so it clears the rail */
+    body{justify-content:flex-start;padding-left:var(--rail);}
+    #app{margin:0 auto;padding-bottom:24px;}      /* no bottom bar to clear anymore */
+
+    nav{
+      top:0;bottom:0;right:auto;left:0;
+      width:var(--rail);
+      flex-direction:column;justify-content:flex-start;
+      border-top:0;border-right:1px solid var(--line);
+      padding-top:14px;
+    }
+    nav .inner{
+      flex-direction:column;
+      width:100%;max-width:none;
+      gap:6px;
+    }
+    nav button{
+      flex:0 0 auto;
+      padding:14px 0;
+      border-radius:12px;
+      margin:0 8px;
+    }
+    nav button.active{background:var(--teal-soft);}
+  }
 
   /* ---------- shared ---------- */
   .screen{display:none;flex-direction:column;flex:1;animation:fade .35s ease;}
